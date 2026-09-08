@@ -25,7 +25,7 @@ class AuthController extends Controller
         }
 
         return response()->json([
-            'data' => UserResource::make($user),
+            'data' => UserResource::make($user->load('roles')),
             'token' => $user->createToken($request->string('device_name'))->plainTextToken,
             'token_type' => 'Bearer',
         ]);
@@ -33,7 +33,7 @@ class AuthController extends Controller
 
     public function show(Request $request): UserResource
     {
-        return UserResource::make($request->user());
+        return UserResource::make($request->user()->loadMissing('roles'));
     }
 
     public function destroy(Request $request): JsonResponse

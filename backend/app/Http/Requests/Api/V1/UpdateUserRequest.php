@@ -31,7 +31,7 @@ class UpdateUserRequest extends FormRequest
     {
         $targetUser = $this->route('user');
         $canChangeRole = $targetUser instanceof User
-            && $this->user()?->role === UserRole::Admin
+            && ($this->user()?->hasRole(UserRole::Admin) ?? false)
             && ! $this->user()->is($targetUser);
 
         return [

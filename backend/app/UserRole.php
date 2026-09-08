@@ -5,5 +5,5 @@ namespace App;
 enum UserRole: string
 {
     case Admin = 'admin';
-    case Member = 'member';
+    case User = 'user';
 }

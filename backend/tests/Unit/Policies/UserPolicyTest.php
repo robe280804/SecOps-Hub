@@ -2,19 +2,14 @@
 
 use App\Models\User;
 use App\Policies\UserPolicy;
-use App\UserRole;
+use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
+use Tests\TestCase;
 
-function policyUser(int $id, UserRole $role): User
-{
-    $user = new User(['role' => $role]);
-    $user->id = $id;
-
-    return $user;
-}
+uses(TestCase::class, LazilyRefreshDatabase::class);
 
 test('admin permission matrix grants user management except self deletion', function () {
-    $admin = policyUser(1, UserRole::Admin);
-    $otherUser = policyUser(2, UserRole::Member);
+    $admin = User::factory()->admin()->create();
+    $otherUser = User::factory()->create();
     $policy = new UserPolicy;
 
     expect($policy->viewAny($admin))->toBeTrue()
@@ -25,17 +20,17 @@ test('admin permission matrix grants user management except self deletion', func
         ->and($policy->delete($admin, $admin))->toBeFalse();
 });
 
-test('member permission matrix grants access only to their own profile', function () {
-    $member = policyUser(1, UserRole::Member);
-    $otherUser = policyUser(2, UserRole::Member);
+test('normal user permission matrix grants access only to their own profile', function () {
+    $user = User::factory()->create();
+    $otherUser = User::factory()->create();
     $policy = new UserPolicy;
 
-    expect($policy->viewAny($member))->toBeFalse()
-        ->and($policy->create($member))->toBeFalse()
-        ->and($policy->view($member, $member))->toBeTrue()
-        ->and($policy->view($member, $otherUser))->toBeFalse()
-        ->and($policy->update($member, $member))->toBeTrue()
-        ->and($policy->update($member, $otherUser))->toBeFalse()
-        ->and($policy->delete($member, $member))->toBeFalse()
-        ->and($policy->delete($member, $otherUser))->toBeFalse();
+    expect($policy->viewAny($user))->toBeFalse()
+        ->and($policy->create($user))->toBeFalse()
+        ->and($policy->view($user, $user))->toBeTrue()
+        ->and($policy->view($user, $otherUser))->toBeFalse()
+        ->and($policy->update($user, $user))->toBeTrue()
+        ->and($policy->update($user, $otherUser))->toBeFalse()
+        ->and($policy->delete($user, $user))->toBeFalse()
+        ->and($policy->delete($user, $otherUser))->toBeFalse();
 });

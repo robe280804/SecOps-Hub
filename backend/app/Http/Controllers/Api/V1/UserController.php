@@ -11,6 +11,7 @@ use App\UserRole;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 
@@ -24,6 +25,7 @@ class UserController extends Controller
         Gate::authorize('viewAny', User::class);
 
         $users = User::query()
+            ->with('roles')
             ->orderBy('name')
             ->orderBy('id')
             ->paginate(15);
@@ -37,9 +39,14 @@ class UserController extends Controller
     public function store(StoreUserRequest $request): JsonResponse
     {
         $validated = $request->validated();
-        $validated['role'] ??= UserRole::Member;
+        $role = Arr::pull($validated, 'role', UserRole::User->value);
 
-        $user = User::create($validated);
+        $user = DB::transaction(function () use ($validated, $role): User {
+            $user = User::create($validated);
+            $user->assignRole($role);
+
+            return $user->load('roles');
+        });
 
         return UserResource::make($user)
             ->response()
@@ -53,7 +60,7 @@ class UserController extends Controller
     {
         Gate::authorize('view', $user);
 
-        return UserResource::make($user);
+        return UserResource::make($user->loadMissing('roles'));
     }
 
     /**
@@ -61,9 +68,18 @@ class UserController extends Controller
      */
     public function update(UpdateUserRequest $request, User $user): UserResource
     {
-        $user->update($request->validated());
+        $validated = $request->validated();
+        $role = Arr::pull($validated, 'role');
 
-        return UserResource::make($user);
+        DB::transaction(function () use ($user, $validated, $role): void {
+            $user->update($validated);
+
+            if ($role !== null) {
+                $user->syncRoles($role);
+            }
+        });
+
+        return UserResource::make($user->load('roles'));
     }
 
     /**

@@ -12,10 +12,10 @@ describe('index', function () {
         $this->getJson('/api/v1/users')->assertUnauthorized();
     });
 
-    it('returns 403 to a member', function () {
-        $member = User::factory()->create();
+    it('returns 403 to a normal user', function () {
+        $user = User::factory()->create();
 
-        $this->actingAs($member)->getJson('/api/v1/users')->assertForbidden();
+        $this->actingAs($user)->getJson('/api/v1/users')->assertForbidden();
     });
 
     it('returns a paginated user list to an admin', function () {
@@ -31,7 +31,7 @@ describe('index', function () {
 });
 
 describe('store', function () {
-    it('creates a member when an admin submits valid data', function () {
+    it('creates a normal user when an admin submits valid data', function () {
         $admin = User::factory()->admin()->create();
 
         $response = $this->actingAs($admin)->postJson('/api/v1/users', [
@@ -44,21 +44,19 @@ describe('store', function () {
         $response
             ->assertCreated()
             ->assertJsonPath('data.email', 'new.analyst@example.com')
-            ->assertJsonPath('data.role', 'member');
-        $this->assertDatabaseHas('users', [
-            'email' => 'new.analyst@example.com',
-            'role' => UserRole::Member->value,
-        ]);
+            ->assertJsonPath('data.role', 'user');
+        $createdUser = User::where('email', 'new.analyst@example.com')->firstOrFail();
+        expect($createdUser->hasRole(UserRole::User))->toBeTrue();
         expect(Hash::check(
             'SecurePassword1!',
             User::where('email', 'new.analyst@example.com')->value('password'),
         ))->toBeTrue();
     });
 
-    it('returns 403 when a member creates a user', function () {
-        $member = User::factory()->create();
+    it('returns 403 when a normal user creates a user', function () {
+        $user = User::factory()->create();
 
-        $this->actingAs($member)->postJson('/api/v1/users', [
+        $this->actingAs($user)->postJson('/api/v1/users', [
             'name' => 'New Analyst',
             'email' => 'new.analyst@example.com',
             'password' => 'SecurePassword1!',
@@ -83,74 +81,68 @@ describe('store', function () {
 });
 
 describe('show', function () {
-    it('returns a member own profile', function () {
-        $member = User::factory()->create();
+    it('returns a normal user own profile', function () {
+        $user = User::factory()->create();
 
-        $this->actingAs($member)
-            ->getJson("/api/v1/users/{$member->id}")
+        $this->actingAs($user)
+            ->getJson("/api/v1/users/{$user->id}")
             ->assertOk()
-            ->assertJsonPath('data.id', $member->id);
+            ->assertJsonPath('data.id', $user->id);
     });
 
-    it('returns 403 when a member views another user', function () {
-        $member = User::factory()->create();
+    it('returns 403 when a normal user views another user', function () {
+        $user = User::factory()->create();
         $otherUser = User::factory()->create();
 
-        $this->actingAs($member)
+        $this->actingAs($user)
             ->getJson("/api/v1/users/{$otherUser->id}")
             ->assertForbidden();
     });
 });
 
 describe('update', function () {
-    it('lets a member update their profile and ignores unexpected attributes', function () {
-        $member = User::factory()->create(['email_verified_at' => null]);
+    it('lets a normal user update their profile and ignores unexpected attributes', function () {
+        $user = User::factory()->create(['email_verified_at' => null]);
 
-        $this->actingAs($member)->patchJson("/api/v1/users/{$member->id}", [
+        $this->actingAs($user)->patchJson("/api/v1/users/{$user->id}", [
             'name' => 'Updated Analyst',
             'email_verified_at' => now()->toISOString(),
         ])->assertOk()
             ->assertJsonPath('data.name', 'Updated Analyst')
             ->assertJsonPath('data.email_verified_at', null);
         $this->assertDatabaseHas('users', [
-            'id' => $member->id,
+            'id' => $user->id,
             'name' => 'Updated Analyst',
             'email_verified_at' => null,
         ]);
     });
 
-    it('returns 422 when a member attempts to change their role', function () {
-        $member = User::factory()->create();
+    it('returns 422 when a normal user attempts to change their role', function () {
+        $user = User::factory()->create();
 
-        $this->actingAs($member)
-            ->patchJson("/api/v1/users/{$member->id}", ['role' => UserRole::Admin->value])
+        $this->actingAs($user)
+            ->patchJson("/api/v1/users/{$user->id}", ['role' => UserRole::Admin->value])
             ->assertUnprocessable()
             ->assertJsonValidationErrors(['role']);
-        $this->assertDatabaseHas('users', [
-            'id' => $member->id,
-            'role' => UserRole::Member->value,
-        ]);
+        expect($user->fresh()->hasRole(UserRole::User))->toBeTrue();
     });
 
     it('lets an admin change another user role', function () {
         $admin = User::factory()->admin()->create();
-        $member = User::factory()->create();
+        $user = User::factory()->create();
 
         $this->actingAs($admin)
-            ->patchJson("/api/v1/users/{$member->id}", ['role' => UserRole::Admin->value])
+            ->patchJson("/api/v1/users/{$user->id}", ['role' => UserRole::Admin->value])
             ->assertOk()
             ->assertJsonPath('data.role', 'admin');
-        $this->assertDatabaseHas('users', [
-            'id' => $member->id,
-            'role' => UserRole::Admin->value,
-        ]);
+        expect($user->fresh()->hasExactRoles(UserRole::Admin))->toBeTrue();
     });
 
-    it('returns 403 when a member updates another user', function () {
-        $member = User::factory()->create();
+    it('returns 403 when a normal user updates another user', function () {
+        $user = User::factory()->create();
         $otherUser = User::factory()->create();
 
-        $this->actingAs($member)
+        $this->actingAs($user)
             ->patchJson("/api/v1/users/{$otherUser->id}", ['name' => 'Unauthorized'])
             ->assertForbidden();
         $this->assertDatabaseMissing('users', [
