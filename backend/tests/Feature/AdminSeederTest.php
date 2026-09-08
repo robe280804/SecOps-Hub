@@ -1,7 +1,7 @@
 <?php
 
+use App\Enums\UserRole;
 use App\Models\User;
-use App\UserRole;
 use Database\Seeders\AdminSeeder;
 use Database\Seeders\DatabaseSeeder;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;

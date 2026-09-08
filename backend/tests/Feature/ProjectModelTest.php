@@ -1,11 +1,11 @@
 <?php
 
+use App\Enums\ProjectAccessLevel;
+use App\Enums\ProjectStatus;
+use App\Enums\ProjectType;
 use App\Models\Project;
 use App\Models\ProjectMembership;
 use App\Models\User;
-use App\ProjectAccessLevel;
-use App\ProjectStatus;
-use App\ProjectType;
 use Database\Seeders\ProjectSeeder;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;

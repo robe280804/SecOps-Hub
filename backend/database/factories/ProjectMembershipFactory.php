@@ -2,10 +2,10 @@
 
 namespace Database\Factories;
 
+use App\Enums\ProjectAccessLevel;
 use App\Models\Project;
 use App\Models\ProjectMembership;
 use App\Models\User;
-use App\ProjectAccessLevel;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**

@@ -2,8 +2,8 @@
 
 namespace App\Models;
 
-use App\ProjectStatus;
-use App\ProjectType;
+use App\Enums\ProjectStatus;
+use App\Enums\ProjectType;
 use Database\Factories\ProjectFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;

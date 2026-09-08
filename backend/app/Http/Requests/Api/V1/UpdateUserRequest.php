@@ -2,8 +2,8 @@
 
 namespace App\Http\Requests\Api\V1;
 
+use App\Enums\UserRole;
 use App\Models\User;
-use App\UserRole;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;

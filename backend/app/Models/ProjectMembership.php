@@ -2,7 +2,7 @@
 
 namespace App\Models;
 
-use App\ProjectAccessLevel;
+use App\Enums\ProjectAccessLevel;
 use Database\Factories\ProjectMembershipFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;

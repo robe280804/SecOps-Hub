@@ -2,10 +2,10 @@
 
 namespace Database\Seeders;
 
+use App\Enums\ProjectStatus;
+use App\Enums\ProjectType;
+use App\Enums\UserRole;
 use App\Models\User;
-use App\ProjectStatus;
-use App\ProjectType;
-use App\UserRole;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 use RuntimeException;
