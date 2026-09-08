@@ -1,5 +1,15 @@
 # Progetto e collaboratori
 
+## Stato dell'implementazione
+
+Implementata la base dati: `projects` e `project_memberships`, model e relazioni con User, enum PHP per tipo/stato/accesso, factory e `ProjectSeeder` dimostrativo. Le migration conservano i valori enum espliciti come snapshot dello schema. Sono adottati i tipi e gli stati proposti sotto, con default `inactive` e `viewer`.
+
+La tabella `project_member_permissions` e il relativo catalogo di codici restano alla fase dei moduli operativi: non vengono introdotti permessi fittizi o assegnabili liberamente. API dei progetti, policy di accesso ai progetti e flussi di archiviazione/gestione collaboratori sono il prossimo passo; questo modello dati da solo non espone operazioni via HTTP.
+
+Il creatore non è modificabile tramite salvataggi Eloquent e non può essere aggiunto come collaboratore. Le scritture dirette tramite query builder o eventi disabilitati non eseguono questi controlli applicativi: i futuri flussi di scrittura dovranno usare i model e transazioni autorizzate. La FK impedisce la cancellazione del creatore e la policy utenti esistente nega anche la richiesta API.
+
+Da `backend`, applicare le migration con `php artisan migrate`. Il seeder opzionale si esegue con `php artisan db:seed --class=ProjectSeeder`: richiede l'admin già creato corrispondente ad `ADMIN_EMAIL` e funziona soltanto in `local`/`testing`. Crea quattro progetti demo inattivi, senza nuovi account o collaboratori, e non è incluso in `DatabaseSeeder`. Riconosce i demo tramite creatore e nome: ripetendolo preserva i dati esistenti; rinominare un demo permette al seeder di ricreare quello con il nome originale.
+
 Riferimenti: [README](../../README.md), [documento architetturale](../../README-CLAUDE.md), [autenticazione esistente](../authentication.md).
 
 ## Obiettivo e requisiti confermati
@@ -109,7 +119,7 @@ I permessi di progetto sono distinti dai ruoli globali Spatie `admin` e `user`. 
 3. CRUD, assegnazione/revoca dei collaboratori e test di isolamento fra progetti.
 4. Collegamento del frontend per elenco, dettaglio e gestione progetto.
 
-Ambienti, settings operativi, scope, profili, esecuzioni, documenti e findings verranno affrontati separatamente. Nessuna migration viene creata durante questa revisione documentale.
+Ambienti, settings operativi, scope, profili, esecuzioni, documenti e findings verranno affrontati separatamente. Lo stato della prima implementazione è riportato all'inizio del documento.
 
 ## Scelte da confermare in revisione
 
@@ -118,4 +128,4 @@ Ambienti, settings operativi, scope, profili, esecuzioni, documenti e findings v
 3. Accessi: proprietario unico, viewer e contributor con permessi aggiuntivi definiti nei futuri moduli?
 4. Admin globale: nessun accesso automatico ai progetti altrui?
 
-Solo dopo la revisione questa proposta diventerà il riferimento per le migration.
+Per la prima base dati sono stati adottati i tipi, gli stati e i livelli di accesso indicati; le regole applicative rimanenti guideranno la fase API e policy.
