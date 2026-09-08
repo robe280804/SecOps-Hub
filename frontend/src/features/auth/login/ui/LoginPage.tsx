@@ -3,8 +3,11 @@ import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { Link } from 'react-router-dom'
 import { loginSchema, type LoginFields } from '../model/loginSchema'
+import { useAuth } from '../../model/AuthContext'
+import { setApiFormErrors } from '../../../../shared/api/formErrors'
 
 export function LoginPage() {
+  const { login } = useAuth()
   const [isPasswordVisible, setIsPasswordVisible] = useState(false)
   const {
     register,
@@ -18,10 +21,12 @@ export function LoginPage() {
     defaultValues: { email: '', password: '' },
   })
 
-  const submitLogin = handleSubmit(() => {
-    setError('root', {
-      message: 'Authentication submission will be connected to the API later.',
-    })
+  const submitLogin = handleSubmit(async (credentials) => {
+    try {
+      await login(credentials)
+    } catch (failure) {
+      setApiFormErrors(failure, setError, ['email', 'password'])
+    }
   })
 
   return (
@@ -32,7 +37,7 @@ export function LoginPage() {
       >
         <header className="mb-6 space-y-2">
           <h1 id="login-title" className="text-2xl font-semibold text-gray-900">
-            Sign in
+            {isSubmitting ? 'Signing in…' : 'Sign in'}
           </h1>
           <p className="text-sm text-gray-600">Use your SecOps Hub account to continue.</p>
         </header>
@@ -104,9 +109,9 @@ export function LoginPage() {
             Sign in
           </button>
 
-          {errors.root && (
+          {errors.root?.server && (
             <p className="text-sm text-red-700" role="alert">
-              {errors.root.message}
+              {errors.root.server.message}
             </p>
           )}
 
