@@ -5,7 +5,6 @@ import {
   registrationSchema,
   type RegistrationFields,
 } from '../model/registrationSchema'
-import '../../ui/auth-form.css'
 
 export function RegistrationPage() {
   const {
@@ -32,17 +31,25 @@ export function RegistrationPage() {
   })
 
   return (
-    <main className="auth-page">
-      <section className="auth-card" aria-labelledby="registration-title">
-        <header>
-          <h1 id="registration-title">Create your account</h1>
-          <p>Enter your details to register for SecOps Hub.</p>
+    <main className="grid min-h-svh place-items-center p-4">
+      <section
+        className="w-full max-w-md rounded-lg border border-gray-300 bg-white p-6 shadow-sm"
+        aria-labelledby="registration-title"
+      >
+        <header className="mb-6 space-y-2">
+          <h1 id="registration-title" className="text-2xl font-semibold text-gray-900">
+            Create your account
+          </h1>
+          <p className="text-sm text-gray-600">Enter your details to register for SecOps Hub.</p>
         </header>
 
-        <form onSubmit={submitRegistration} noValidate>
-          <div className="form-field">
-            <label htmlFor="name">Name</label>
+        <form className="space-y-4" onSubmit={submitRegistration} noValidate>
+          <div className="space-y-2">
+            <label className="block text-sm font-medium text-gray-800" htmlFor="name">
+              Name
+            </label>
             <input
+              className="min-h-11 w-full rounded-md border border-gray-400 px-3 py-2 text-base outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20 aria-invalid:border-red-700"
               id="name"
               type="text"
               autoComplete="name"
@@ -51,15 +58,18 @@ export function RegistrationPage() {
               {...register('name')}
             />
             {errors.name && (
-              <p id="name-error" className="field-error">
+              <p id="name-error" className="text-sm text-red-700">
                 {errors.name.message}
               </p>
             )}
           </div>
 
-          <div className="form-field">
-            <label htmlFor="email">Email</label>
+          <div className="space-y-2">
+            <label className="block text-sm font-medium text-gray-800" htmlFor="email">
+              Email
+            </label>
             <input
+              className="min-h-11 w-full rounded-md border border-gray-400 px-3 py-2 text-base outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20 aria-invalid:border-red-700"
               id="email"
               type="email"
               inputMode="email"
@@ -70,15 +80,18 @@ export function RegistrationPage() {
               {...register('email')}
             />
             {errors.email && (
-              <p id="email-error" className="field-error">
+              <p id="email-error" className="text-sm text-red-700">
                 {errors.email.message}
               </p>
             )}
           </div>
 
-          <div className="form-field">
-            <label htmlFor="password">Password</label>
+          <div className="space-y-2">
+            <label className="block text-sm font-medium text-gray-800" htmlFor="password">
+              Password
+            </label>
             <input
+              className="min-h-11 w-full rounded-md border border-gray-400 px-3 py-2 text-base outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20 aria-invalid:border-red-700"
               id="password"
               type="password"
               autoComplete="new-password"
@@ -87,15 +100,21 @@ export function RegistrationPage() {
               {...register('password')}
             />
             {errors.password && (
-              <p id="password-error" className="field-error">
+              <p id="password-error" className="text-sm text-red-700">
                 {errors.password.message}
               </p>
             )}
           </div>
 
-          <div className="form-field">
-            <label htmlFor="password-confirmation">Confirm password</label>
+          <div className="space-y-2">
+            <label
+              className="block text-sm font-medium text-gray-800"
+              htmlFor="password-confirmation"
+            >
+              Confirm password
+            </label>
             <input
+              className="min-h-11 w-full rounded-md border border-gray-400 px-3 py-2 text-base outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20 aria-invalid:border-red-700"
               id="password-confirmation"
               type="password"
               autoComplete="new-password"
@@ -106,22 +125,29 @@ export function RegistrationPage() {
               {...register('passwordConfirmation')}
             />
             {errors.passwordConfirmation && (
-              <p id="password-confirmation-error" className="field-error">
+              <p id="password-confirmation-error" className="text-sm text-red-700">
                 {errors.passwordConfirmation.message}
               </p>
             )}
           </div>
 
-          <button type="submit" disabled={isSubmitting}>
+          <button
+            className="min-h-11 w-full rounded-md bg-gray-900 px-4 py-2 font-medium text-white hover:bg-gray-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 disabled:cursor-wait disabled:opacity-60"
+            type="submit"
+            disabled={isSubmitting}
+          >
             Create account
           </button>
 
-          <p className="auth-navigation">
-            Already have an account? <Link to="/login">Sign in</Link>
+          <p className="text-center text-sm text-gray-600">
+            Already have an account?{' '}
+            <Link className="font-medium text-blue-700 hover:underline" to="/login">
+              Sign in
+            </Link>
           </p>
 
           {errors.root && (
-            <p className="form-error" role="alert">
+            <p className="text-sm text-red-700" role="alert">
               {errors.root.message}
             </p>
           )}
