@@ -1,10 +1,11 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
+import { Link } from 'react-router-dom'
 import {
   registrationSchema,
   type RegistrationFields,
 } from '../model/registrationSchema'
-import './registration.css'
+import '../../ui/auth-form.css'
 
 export function RegistrationPage() {
   const {
@@ -31,8 +32,8 @@ export function RegistrationPage() {
   })
 
   return (
-    <main className="registration-page">
-      <section className="registration-card" aria-labelledby="registration-title">
+    <main className="auth-page">
+      <section className="auth-card" aria-labelledby="registration-title">
         <header>
           <h1 id="registration-title">Create your account</h1>
           <p>Enter your details to register for SecOps Hub.</p>
@@ -114,6 +115,10 @@ export function RegistrationPage() {
           <button type="submit" disabled={isSubmitting}>
             Create account
           </button>
+
+          <p className="auth-navigation">
+            Already have an account? <Link to="/login">Sign in</Link>
+          </p>
 
           {errors.root && (
             <p className="form-error" role="alert">

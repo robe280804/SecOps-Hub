@@ -1,11 +1,11 @@
-.registration-page {
+.auth-page {
   min-height: 100svh;
   display: grid;
   place-items: center;
   padding: 1rem;
 }
 
-.registration-card {
+.auth-card {
   width: min(100%, 28rem);
   padding: 1.5rem;
   border: 1px solid #d1d5db;
@@ -13,31 +13,44 @@
   background: #fff;
 }
 
-.registration-card h1 {
+.auth-card h1 {
   margin: 0;
   color: #111827;
 }
 
-.registration-card header p {
+.auth-card header p {
   margin: 0.5rem 0 1.5rem;
 }
 
-.registration-card form,
+.auth-card form,
 .form-field {
   display: grid;
   gap: 0.5rem;
 }
 
-.registration-card form {
+.auth-card form {
   gap: 1rem;
 }
 
-.form-field label {
+.form-field label,
+.field-heading {
   font-weight: 600;
 }
 
+.field-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.field-heading a {
+  font-size: 0.875rem;
+  font-weight: 400;
+}
+
 .form-field input,
-.registration-card button {
+.auth-card form > button {
   min-height: 2.75rem;
   padding: 0.625rem 0.75rem;
   border: 1px solid #9ca3af;
@@ -46,7 +59,8 @@
 }
 
 .form-field input:focus-visible,
-.registration-card button:focus-visible {
+.auth-card button:focus-visible,
+.auth-card a:focus-visible {
   outline: 2px solid #2563eb;
   outline-offset: 2px;
 }
@@ -55,16 +69,37 @@
   border-color: #b91c1c;
 }
 
-.registration-card button {
+.auth-card form > button {
   border-color: #111827;
   color: #fff;
   background: #111827;
   cursor: pointer;
 }
 
-.registration-card button:disabled {
+.auth-card form > button:disabled {
   cursor: wait;
   opacity: 0.65;
+}
+
+.password-input {
+  position: relative;
+  display: flex;
+}
+
+.password-input input {
+  width: 100%;
+  padding-right: 4.5rem;
+}
+
+.password-toggle {
+  position: absolute;
+  inset-block: 0;
+  right: 0;
+  padding: 0 0.75rem;
+  border: 0;
+  color: #374151;
+  background: transparent;
+  cursor: pointer;
 }
 
 .field-error,
@@ -72,4 +107,9 @@
   margin: 0;
   color: #b91c1c;
   font-size: 0.875rem;
+}
+
+.auth-navigation {
+  margin: 0;
+  text-align: center;
 }
