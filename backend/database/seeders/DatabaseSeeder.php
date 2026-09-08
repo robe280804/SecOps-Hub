@@ -2,7 +2,6 @@
 
 namespace Database\Seeders;
 
-use App\Models\User;
 use App\UserRole;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
@@ -20,11 +19,6 @@ class DatabaseSeeder extends Seeder
         Role::findOrCreate(UserRole::Admin);
         Role::findOrCreate(UserRole::User);
 
-        // User::factory(10)->create();
-
-        User::factory()->admin()->create([
-            'name' => 'Test Admin',
-            'email' => 'test@example.com',
-        ]);
+        $this->call(AdminSeeder::class);
     }
 }

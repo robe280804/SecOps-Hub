@@ -24,3 +24,7 @@ Ogni ambiente di progetto gira isolato dalla rete di produzione. Non è un detta
 ## Stato del progetto
 
 In fase di design. Le decisioni architetturali principali (terminale integrato, gestione tool, livello di autonomia AI) sono documentate e in corso di definizione — vedi `README-CREATION.md` per il dettaglio tecnico e le roadmap di implementazione.
+
+## Opzioni aggiuntive
+
+- L'ai sarà a carico dell'utente, ovvero questo nei settings potrà eseguire l'accesso o collegarlo via api e spawnarla nel terminale dell'ambiente (da vedere come vincolarla a quell'ambiente come una sandbox)
