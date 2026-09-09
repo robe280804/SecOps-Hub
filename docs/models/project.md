@@ -4,7 +4,7 @@
 
 Implementata la base dati: `projects` e `project_memberships`, model e relazioni con User, enum PHP per tipo/stato/accesso, factory e `ProjectSeeder` dimostrativo. Le migration conservano i valori enum espliciti come snapshot dello schema. Sono adottati i tipi e gli stati proposti sotto, con default `inactive` e `viewer`.
 
-Implementata l'API dei progetti con policy, validazione, risorse JSON e test di policy e HTTP. La tabella `project_member_permissions` e il relativo catalogo di codici restano alla fase dei moduli operativi. Le API di gestione dei collaboratori restano un passo successivo; le membership esistenti vengono già considerate per l'accesso in lettura.
+Implementate le API dei progetti e dei collaboratori con policy, validazione, risorse JSON e test di policy e HTTP. Il frontend include CRUD dei progetti e gestione dei collaboratori riservata al proprietario. La tabella `project_member_permissions` e il relativo catalogo di codici restano alla fase dei moduli operativi.
 
 Il creatore non è modificabile tramite salvataggi Eloquent e non può essere aggiunto come collaboratore. Le scritture dirette tramite query builder o eventi disabilitati non eseguono questi controlli applicativi: i futuri flussi di scrittura dovranno usare i model e transazioni autorizzate. La FK impedisce la cancellazione del creatore e la policy utenti esistente nega anche la richiesta API.
 
@@ -39,6 +39,24 @@ Un progetto archiviato rifiuta gli aggiornamenti con 409, eccetto una richiesta 
 Un utente estraneo, compreso un admin globale, riceve 404 su dettaglio, aggiornamento e archiviazione. Un collaboratore riceve 403 sulle scritture. Gli input non validi producono 422. Lettura e lista verificano la membership corrente, senza conservare l'autorizzazione nella sessione o nel token.
 
 L'archiviazione non consente di cancellare l'account proprietario: per questo MVP non sono previsti trasferimento della proprietà o cancellazione definitiva del progetto.
+
+## API collaboratori
+
+Tutti i percorsi seguenti sono sotto `/api/v1`, richiedono autenticazione e sono riservati al proprietario del progetto. I collaboratori ricevono 403; utenti estranei e admin globali senza proprietà ricevono 404. Le risposte usano `Cache-Control: no-store, private`.
+
+| Metodo e percorso | Comportamento |
+| --- | --- |
+| `GET /projects/{project}/memberships` | Elenco paginato di 15 collaboratori, ordinato per ID; disponibile anche in archivio |
+| `GET /projects/{project}/collaborator-lookup?email=...` | Ricerca per email esatta, massimo 255 caratteri; restituisce zero o un account esistente, escludendo proprietario e collaboratori già presenti; limite aggiuntivo di 10 ricerche al minuto per utente |
+| `POST /projects/{project}/memberships` | Aggiunge un account esistente tramite `user_id`; `access_level` opzionale, default `viewer`; risposta 201 |
+| `PATCH` o `PUT /projects/{project}/memberships/{membership}` | Cambia soltanto `access_level` in `viewer` o `contributor`; risposta 200 |
+| `DELETE /projects/{project}/memberships/{membership}` | Revoca la membership senza cancellare account o progetto; risposta 204 |
+
+Il binding annidato impedisce di usare una membership appartenente a un altro progetto, anche se entrambi sono dello stesso proprietario. Le scritture rileggono e bloccano la riga del progetto nella stessa transazione usata per il controllo autorizzativo. I progetti archiviati consentono soltanto elenco e revoca: aggiunte, cambi di ruolo e lookup producono 409. Assegnazioni duplicate e tentativi di aggiungere il creatore producono 422.
+
+La risorsa membership espone `id`, `project_id`, `access_level`, `created_at`, `updated_at` e `user` con i soli campi `id`, `name`, `email`. La lookup espone soltanto questi tre campi dell'account; non apre l'elenco amministrativo degli utenti. `project_id` non è accettato nel payload; in aggiornamento viene rifiutato anche `user_id`. L'identità della membership è immutabile anche nei salvataggi Eloquent: occorre revocare e creare una nuova assegnazione.
+
+Nel dettaglio frontend il proprietario trova la sezione **Collaborators**, con ricerca email, selezione del ruolo, modifica e conferma della revoca. Entrambi i livelli di collaboratore continuano ad accedere ai soli dati principali del progetto; non sono aggiunte operazioni per moduli non ancora implementati.
 
 ## Relazioni
 

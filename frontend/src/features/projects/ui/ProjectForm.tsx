@@ -1,7 +1,7 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useEffect, useRef } from 'react'
 import { useForm } from 'react-hook-form'
-import { projectFormSchema, projectTypes, projectTypeLabels, type ProjectFields } from '../model/projectSchema'
+import { projectFormSchema, projectTextLimits, projectTypes, projectTypeLabels, type ProjectFields } from '../model/projectSchema'
 import { setApiFormErrors } from '../../../shared/api/formErrors'
 
 type Props = {
@@ -14,6 +14,8 @@ export function ProjectForm({ initialValues, onSave }: Props) {
   useEffect(() => () => request.current?.abort(), [])
   const { register, handleSubmit, setError, formState: { errors, isSubmitting } } = useForm<ProjectFields>({
     resolver: zodResolver(projectFormSchema),
+    mode: 'onBlur',
+    reValidateMode: 'onChange',
     defaultValues: initialValues ?? { name: '', description: '', type: 'personal', status: 'inactive' },
   })
 
@@ -33,14 +35,16 @@ export function ProjectForm({ initialValues, onSave }: Props) {
       <legend className="sr-only">Project details</legend>
       <div>
         <label htmlFor="project-name" className="block font-medium">Name</label>
-        <input id="project-name" className="w-full rounded border bg-white p-2" maxLength={255}
-          aria-invalid={!!errors.name} aria-describedby={errors.name ? 'project-name-error' : undefined} {...register('name')} />
+        <input id="project-name" className="w-full rounded border bg-white p-2" required minLength={1} maxLength={projectTextLimits.name}
+          aria-invalid={!!errors.name} aria-describedby={'project-name-hint' + (errors.name ? ' project-name-error' : '')} {...register('name')} />
+        <p id="project-name-hint" className="text-sm text-gray-600">Required. 1–{projectTextLimits.name} characters; cannot be only spaces.</p>
         {errors.name && <p id="project-name-error" className="text-red-700">{errors.name.message}</p>}
       </div>
       <div>
         <label htmlFor="project-description" className="block font-medium">Description (optional)</label>
-        <textarea id="project-description" rows={5} maxLength={10000} className="w-full rounded border bg-white p-2"
-          aria-invalid={!!errors.description} aria-describedby={errors.description ? 'project-description-error' : undefined} {...register('description')} />
+        <textarea id="project-description" rows={5} maxLength={projectTextLimits.description} className="w-full rounded border bg-white p-2"
+          aria-invalid={!!errors.description} aria-describedby={'project-description-hint' + (errors.description ? ' project-description-error' : '')} {...register('description')} />
+        <p id="project-description-hint" className="text-sm text-gray-600">Optional. Up to {projectTextLimits.description.toLocaleString('en-US')} characters.</p>
         {errors.description && <p id="project-description-error" className="text-red-700">{errors.description.message}</p>}
       </div>
       <div>

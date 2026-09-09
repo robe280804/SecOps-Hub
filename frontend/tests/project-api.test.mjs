@@ -106,3 +106,14 @@ test('validates project form boundaries and preserves text without treating it a
   const text = '<script>alert(1)</script>'
   assert.equal(projectFormSchema.parse({ ...fields, description: text }).description, text)
 })
+
+test('requires a nonblank project name and allows an empty optional description', () => {
+  for (const name of ['', '   ', '\t\n']) {
+    const result = projectFormSchema.safeParse({ ...fields, name })
+    assert.equal(result.success, false)
+    assert.equal(result.error.issues[0].message, 'Enter a project name.')
+  }
+  const result = projectFormSchema.parse({ ...fields, name: ' A ', description: '' })
+  assert.equal(result.name, 'A')
+  assert.equal(result.description, '')
+})
