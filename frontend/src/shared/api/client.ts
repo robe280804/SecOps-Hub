@@ -20,6 +20,7 @@ type RequestOptions = {
   method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
   body?: unknown
   signal?: AbortSignal
+  query?: Record<string, string | number>
 }
 
 type ClientOptions = {
@@ -49,6 +50,9 @@ export function createApiClient({ origin, fetcher = fetch, readCookie, onSession
     if (url.origin !== new URL(origin).origin || !/^\/(api\/v1\/|sanctum\/csrf-cookie$)/.test(url.pathname)) {
       throw new ApiError('Invalid API path.')
     }
+    for (const [key, value] of Object.entries(options.query ?? {})) {
+      url.searchParams.set(key, String(value))
+    }
     const method = options.method ?? 'GET'
     const headers = new Headers({ Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' })
     if (options.body !== undefined) headers.set('Content-Type', 'application/json')
@@ -77,6 +81,7 @@ export function createApiClient({ origin, fetcher = fetch, readCookie, onSession
           401: 'Please sign in to continue.',
           403: 'You do not have permission to perform this action.',
           404: 'The requested resource was not found.',
+          409: 'The project state has changed or it is archived. Reload the project before making changes.',
           419: 'Your session has expired. Please sign in again.',
           422: 'Please check the highlighted fields.',
           429: 'Too many requests. Please wait before trying again.',

@@ -94,3 +94,25 @@ test('malformed cookies fail safely without sending a request', async () => {
   const client = makeClient(() => assert.fail('must not fetch'), { readCookie: () => 'XSRF-TOKEN=%invalid' })
   await assert.rejects(client.request('/api/v1/session', { method: 'DELETE' }), (error) => error.status === 419)
 })
+
+test('encodes query parameters without allowing them to change the request origin or path', async () => {
+  const client = makeClient(async (url) => {
+    assert.equal(url.origin, 'https://api.example.com')
+    assert.equal(url.pathname, '/api/v1/projects')
+    assert.equal(url.searchParams.get('page'), '2')
+    assert.equal(url.searchParams.get('search'), '//evil.example/?secret=value#fragment')
+    return Response.json({ data: [] })
+  })
+  await client.request('/api/v1/projects', { query: { page: 2, search: '//evil.example/?secret=value#fragment' } })
+})
+
+test('describes state conflicts without exposing backend messages or retrying writes', async () => {
+  let calls = 0
+  const client = makeClient(async () => {
+    calls++
+    return Response.json({ message: 'Internal diagnostics' }, { status: 409 })
+  })
+  await assert.rejects(client.request('/api/v1/projects/1', { method: 'PATCH', body: { name: 'Edit' } }),
+    (error) => error.status === 409 && error.message.includes('Reload') && !error.message.includes('diagnostics'))
+  assert.equal(calls, 1)
+})
