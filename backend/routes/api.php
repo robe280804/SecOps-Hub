@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\V1\AuthController;
+use App\Http\Controllers\Api\V1\ProjectController;
 use App\Http\Controllers\Api\V1\UserController;
 use Illuminate\Support\Facades\Route;
 
@@ -13,5 +14,6 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
         Route::get('/me', [AuthController::class, 'show'])->name('me.show');
         Route::delete('/logout', [AuthController::class, 'destroy'])->name('logout');
         Route::apiResource('users', UserController::class);
+        Route::apiResource('projects', ProjectController::class);
     });
 });

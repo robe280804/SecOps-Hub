@@ -4,7 +4,7 @@
 
 Implementata la base dati: `projects` e `project_memberships`, model e relazioni con User, enum PHP per tipo/stato/accesso, factory e `ProjectSeeder` dimostrativo. Le migration conservano i valori enum espliciti come snapshot dello schema. Sono adottati i tipi e gli stati proposti sotto, con default `inactive` e `viewer`.
 
-La tabella `project_member_permissions` e il relativo catalogo di codici restano alla fase dei moduli operativi: non vengono introdotti permessi fittizi o assegnabili liberamente. API dei progetti, policy di accesso ai progetti e flussi di archiviazione/gestione collaboratori sono il prossimo passo; questo modello dati da solo non espone operazioni via HTTP.
+Implementata l'API dei progetti con policy, validazione, risorse JSON e test di policy e HTTP. La tabella `project_member_permissions` e il relativo catalogo di codici restano alla fase dei moduli operativi. Le API di gestione dei collaboratori restano un passo successivo; le membership esistenti vengono già considerate per l'accesso in lettura.
 
 Il creatore non è modificabile tramite salvataggi Eloquent e non può essere aggiunto come collaboratore. Le scritture dirette tramite query builder o eventi disabilitati non eseguono questi controlli applicativi: i futuri flussi di scrittura dovranno usare i model e transazioni autorizzate. La FK impedisce la cancellazione del creatore e la policy utenti esistente nega anche la richiesta API.
 
@@ -18,7 +18,27 @@ Ogni progetto ha un unico creatore che ne mantiene la proprietà e la gestione c
 
 Il perimetro attuale comprende soltanto dati principali del progetto, proprietà, collaboratori e regole di accesso. Ambienti, settings operativi, IP/DNS, scope e profili di scansione sono rimandati alla bozza separata [environment-and-scanning.md](environment-and-scanning.md). Non sono prerequisiti per creare un progetto.
 
-Le scelte indicate come proposta, compresi enum e permessi, richiedono revisione prima delle migration.
+Tipi, stati e livelli di accesso sono già adottati dalla base dati. Le proposte per i permessi dei moduli futuri richiedono ancora revisione.
+
+## API progetti — `/api/v1/projects`
+
+Tutti gli endpoint richiedono autenticazione Sanctum e applicano il rate limiter API esistente. Ogni account autenticato può creare progetti; il creatore è sempre l'utente autenticato. Il campo `user_id` nel payload viene rifiutato, anche se nullo. I campi non previsti non vengono salvati.
+
+| Metodo e percorso | Comportamento |
+| --- | --- |
+| `GET /projects` | Elenco dei soli progetti propri o con membership corrente, inclusi inattivi e archiviati; paginazione di 15 elementi, ordinamento per nome e ID |
+| `POST /projects` | Creazione con `name` e `type` obbligatori, `description` opzionale; stato iniziale `inactive` oppure `active`, default `inactive`; risposta 201 |
+| `GET /projects/{project}` | Dettaglio accessibile al proprietario e ai collaboratori, in qualsiasi stato |
+| `PATCH` o `PUT /projects/{project}` | Aggiornamento dei soli campi forniti, riservato al proprietario; risposta 200 |
+| `DELETE /projects/{project}` | Archiviazione riservata al proprietario; conserva progetto e membership, risponde 204 anche se già archiviato |
+
+`name` accetta fino a 255 caratteri; `description` è testo nullable con massimo 10000 caratteri. Nome duplicato consentito. La risposta espone soltanto `id`, `user_id`, `name`, `description`, `type`, `status`, `created_at` e `updated_at`, con `Cache-Control: no-store, private`.
+
+Un progetto archiviato rifiuta gli aggiornamenti con 409, eccetto una richiesta contenente il solo campo validato `status` impostato a `inactive` o `active`. Per modificarne anche i dati occorre prima riattivarlo con una richiesta separata. Lo stato viene riletto con lock nella transazione di aggiornamento o archiviazione. Nei progetti non archiviati il proprietario può impostare qualsiasi stato previsto.
+
+Un utente estraneo, compreso un admin globale, riceve 404 su dettaglio, aggiornamento e archiviazione. Un collaboratore riceve 403 sulle scritture. Gli input non validi producono 422. Lettura e lista verificano la membership corrente, senza conservare l'autorizzazione nella sessione o nel token.
+
+L'archiviazione non consente di cancellare l'account proprietario: per questo MVP non sono previsti trasferimento della proprietà o cancellazione definitiva del progetto.
 
 ## Relazioni
 
@@ -98,14 +118,14 @@ Il creatore conserva il controllo completo. La partecipazione come contributor n
 
 La struttura dei permessi è predisposta per le operazioni future, ma in questa fase non introduce permessi di scansione, gestione documenti o findings. Il catalogo dei codici verrà definito con ciascun modulo: fino ad allora viewer e contributor hanno le stesse capacità sul solo Project. Resta fermo il vincolo che i collaboratori non amministrano gli ambienti.
 
-I permessi di progetto sono distinti dai ruoli globali Spatie `admin` e `user`. Proposta: un admin globale gestisce gli account ma non ottiene automaticamente accesso a tutti i progetti. Un eventuale accesso amministrativo eccezionale andrà definito esplicitamente.
+I permessi di progetto sono distinti dai ruoli globali Spatie `admin` e `user`. Un admin globale gestisce gli account ma non ottiene automaticamente accesso a tutti i progetti. Un eventuale accesso amministrativo eccezionale andrà definito esplicitamente.
 
 ## Integrità e autorizzazione
 
 - La proprietà viene assegnata dall'utente autenticato alla creazione e non accettata liberamente dal payload.
 - Il proprietario non può essere inserito come collaboratore: controllo applicativo transazionale perché coinvolge due tabelle.
 - Le membership e i relativi permessi sono sempre caricati nel contesto del progetto autorizzato; conoscere un ID non concede accesso.
-- L'eliminazione di un proprietario viene bloccata finché possiede progetti. Questo richiederà un aggiornamento della gestione utenti esistente.
+- L'eliminazione di un proprietario viene bloccata finché possiede progetti, anche archiviati. La gestione utenti esistente applica già questo controllo.
 - Eliminare un collaboratore rimuove membership e permessi. Revocare una membership rimuove i suoi permessi nella stessa operazione.
 - Le autorizzazioni sono verificate dal backend a ogni richiesta. Una revoca deve impedire anche le successive richieste da sessioni già aperte.
 - La registrazione delle modifiche a proprietà, membri e permessi sarà trattata nel futuro modello di audit, senza introdurne qui lo schema.
