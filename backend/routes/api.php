@@ -3,6 +3,8 @@
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\ProjectCollaboratorLookupController;
 use App\Http\Controllers\Api\V1\ProjectController;
+use App\Http\Controllers\Api\V1\ProjectEnvironmentController;
+use App\Http\Controllers\Api\V1\ProjectEnvironmentOptionsController;
 use App\Http\Controllers\Api\V1\ProjectMembershipController;
 use App\Http\Controllers\Api\V1\UserController;
 use Illuminate\Support\Facades\Route;
@@ -17,6 +19,9 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
         Route::delete('/logout', [AuthController::class, 'destroy'])->name('logout');
         Route::apiResource('users', UserController::class);
         Route::apiResource('projects', ProjectController::class);
+        Route::apiResource('projects.environments', ProjectEnvironmentController::class)->scoped();
+        Route::get('projects/{project}/environment-options', ProjectEnvironmentOptionsController::class)
+            ->name('projects.environment-options');
         Route::get('projects/{project}/collaborator-lookup', ProjectCollaboratorLookupController::class)
             ->middleware('throttle:collaborator-lookup')->name('projects.collaborator-lookup');
         Route::apiResource('projects.memberships', ProjectMembershipController::class)
