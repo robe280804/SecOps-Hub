@@ -1,7 +1,7 @@
 <?php
 
+use App\Enums\UserRole;
 use App\Models\User;
-use App\UserRole;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 

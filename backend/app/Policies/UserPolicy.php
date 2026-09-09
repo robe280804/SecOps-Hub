@@ -2,8 +2,8 @@
 
 namespace App\Policies;
 
+use App\Enums\UserRole;
 use App\Models\User;
-use App\UserRole;
 
 class UserPolicy
 {
@@ -44,7 +44,7 @@ class UserPolicy
      */
     public function delete(User $user, User $model): bool
     {
-        return $user->hasRole(UserRole::Admin) && ! $user->is($model);
+        return $user->hasRole(UserRole::Admin) && ! $user->is($model) && ! $model->projects()->exists();
     }
 
     /**
