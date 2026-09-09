@@ -50,3 +50,34 @@ test('unrelated users including global admins cannot discover or manage projects
     expect($policy->delete($user, $project)->status())->toBe(404);
     expect($policy->forceDelete($user, $project))->toBeFalse();
 })->with(['user', 'admin']);
+
+test('only owners can list and revoke members in every state', function (ProjectStatus $status) {
+    $project = Project::factory()->create(['status' => $status]);
+    $policy = new ProjectPolicy;
+
+    expect($policy->viewMembers($project->creator, $project)->allowed())->toBeTrue();
+    expect($policy->revokeMembers($project->creator, $project)->allowed())->toBeTrue();
+    expect($policy->manageMembers($project->creator, $project)->allowed())->toBe($status !== ProjectStatus::Archived);
+})->with(ProjectStatus::cases());
+
+test('collaborator levels cannot manage memberships even in archived projects', function (ProjectAccessLevel $access, ProjectStatus $status) {
+    $project = Project::factory()->create(['status' => $status]);
+    $membership = ProjectMembership::factory()->for($project)->create(['access_level' => $access]);
+    $policy = new ProjectPolicy;
+
+    expect($policy->viewMembers($membership->user, $project)->denied())->toBeTrue();
+    expect($policy->manageMembers($membership->user, $project)->denied())->toBeTrue();
+    expect($policy->manageMembers($membership->user, $project)->status())->toBeNull();
+    expect($policy->revokeMembers($membership->user, $project)->denied())->toBeTrue();
+})->with(ProjectAccessLevel::cases())->with(ProjectStatus::cases());
+
+test('membership abilities hide unrelated projects from users and global admins', function (string $role) {
+    $user = User::factory()->create();
+    $user->syncRoles($role);
+    $project = Project::factory()->archived()->create();
+    $policy = new ProjectPolicy;
+
+    expect($policy->viewMembers($user, $project)->status())->toBe(404);
+    expect($policy->manageMembers($user, $project)->status())->toBe(404);
+    expect($policy->revokeMembers($user, $project)->status())->toBe(404);
+})->with(['user', 'admin']);

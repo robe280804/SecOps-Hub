@@ -23,6 +23,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        RateLimiter::for('collaborator-lookup', function (Request $request): Limit {
+            return Limit::perMinute(10)->by((string) $request->user()->id);
+        });
+
         RateLimiter::for('login', function (Request $request): Limit {
             $emailAndIp = Str::lower($request->string('email')).'|'.$request->ip();
 

@@ -25,6 +25,14 @@ class ProjectMembership extends Model
 
     protected static function booted(): void
     {
+        static::updating(function (ProjectMembership $membership): void {
+            if ($membership->isDirty(['project_id', 'user_id'])) {
+                throw ValidationException::withMessages([
+                    'membership' => ['Membership identity cannot be changed. Revoke access and create a new membership instead.'],
+                ]);
+            }
+        });
+
         static::saving(function (ProjectMembership $membership): void {
             if (Project::query()->whereKey($membership->project_id)->where('user_id', $membership->user_id)->exists()) {
                 throw ValidationException::withMessages(['user_id' => ['The project creator cannot be added as a collaborator.']]);

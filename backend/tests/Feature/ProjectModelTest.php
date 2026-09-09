@@ -119,6 +119,16 @@ it('restricts deleting owners at database level', function () {
     $this->assertModelExists($project);
 });
 
+it('rejects moving a membership to a different project or user', function (string $field) {
+    $membership = ProjectMembership::factory()->create();
+    $before = $membership->fresh()->getRawOriginal();
+    $membership->{$field} = $field === 'project_id' ? Project::factory()->create()->id : User::factory()->create()->id;
+
+    expect(fn () => $membership->save())->toThrow(ValidationException::class);
+
+    expect($membership->fresh()->getRawOriginal())->toBe($before);
+})->with(['project_id', 'user_id']);
+
 it('returns 403 when an admin attempts to delete a project owner', function () {
     $admin = User::factory()->admin()->create();
     $project = Project::factory()->create();

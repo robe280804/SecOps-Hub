@@ -2,6 +2,7 @@
 
 namespace App\Policies;
 
+use App\Enums\ProjectStatus;
 use App\Models\Project;
 use App\Models\User;
 use Illuminate\Auth\Access\Response;
@@ -48,5 +49,28 @@ class ProjectPolicy
     public function forceDelete(User $user, Project $project): bool
     {
         return false;
+    }
+
+    public function viewMembers(User $user, Project $project): Response
+    {
+        return $this->update($user, $project);
+    }
+
+    public function manageMembers(User $user, Project $project): Response
+    {
+        $access = $this->update($user, $project);
+
+        if ($access->denied()) {
+            return $access;
+        }
+
+        return $project->status === ProjectStatus::Archived
+            ? Response::denyWithStatus(409, 'Archived projects allow collaborator revocation only.')
+            : Response::allow();
+    }
+
+    public function revokeMembers(User $user, Project $project): Response
+    {
+        return $this->update($user, $project);
     }
 }
