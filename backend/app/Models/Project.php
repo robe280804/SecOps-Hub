@@ -43,4 +43,9 @@ class Project extends Model
     {
         return $this->hasMany(ProjectMembership::class);
     }
+
+    public function environments(): HasMany
+    {
+        return $this->hasMany(ProjectEnvironment::class);
+    }
 }

@@ -1,5 +1,7 @@
 # Ambienti, scope e profili di scansione
 
+Questo documento descrive dati, relazioni e vincoli proposti. I flussi operativi sono in [feature/environment.md](../feature/environment.md) e [feature/execution.md](../feature/execution.md).
+
 Stato: **bozza futura da revisionare**, esclusa dalla prima implementazione del progetto. Le proposte qui raccolte non sono decisioni approvate né richiedono migration in questa fase.
 
 Il modello principale è descritto in [project.md](project.md). Un progetto deve poter essere creato e gestito senza ambienti, profili o configurazioni di scansione.
@@ -38,8 +40,13 @@ Relazione progetto uno a molti: un progetto può avere zero o più ambienti, evi
 | `name` | Nome univoco all'interno del progetto |
 | `description` | Testo facoltativo |
 | `base_image` | Riferimento immagine, idealmente con digest per riproducibilità |
-| `status` | Stato gestito dal backend: `pending`, `provisioning`, `stopped`, `running`, `error`, `deleting` |
+| `desired_state` | Obiettivo richiesto: `stopped`, `running` oppure `deleted` |
+| `status` | Stato applicativo osservato: `inactive`, `provisioning`, `stopped`, `starting`, `ready`, `stopping`, `error`, `deleting` |
 | `runtime_reference` | Riferimento interno al runtime, nullable prima del provisioning; non scrivibile dal client |
+| `runtime_generation` | Generazione del container; distingue eventi e installazioni precedenti a una ricreazione |
+| `runtime_status` | Stato Docker osservato, separato dalla readiness applicativa |
+| `workspace_reference` | Riferimento interno al volume persistente, indipendente dall'identità del container |
+| `last_error`, `last_observed_at` | Ultimo errore operativo e data dell'ultima riconciliazione |
 | `network_configuration` | JSON validato: modalità IP automatica/statica, eventuale IP privato richiesto, resolver DNS, domini di ricerca |
 | `resource_limits` | JSON validato: CPU, memoria e storage entro limiti infrastrutturali |
 | `created_at`, `updated_at` | Date |
@@ -85,21 +92,32 @@ All'avvio si selezionano un ambiente e target appartenenti allo stesso progetto.
 
 La futura entità di esecuzione conserverà autore, ambiente, target e copia della configurazione effettivamente usata: modificare un profilo non deve riscrivere lo storico. Il limite effettivo è il più restrittivo tra piattaforma, progetto e profilo.
 
-## Accesso e ciclo di vita delle esecuzioni
+## Entità operative collegate, ancora da definire
 
-Il proprietario gestisce ambienti, rete, installazioni e profili. I collaboratori non possono modificare gli ambienti. La shell libera permette anche di modificarli: per questo si propone di riservarla al proprietario e delegare ai contributor soltanto esecuzioni controllate.
+Questi sono contratti informativi proposti, non migration o nomi di classi già adottati.
 
-Permessi futuri proposti: `scans.read` per risultati e log, `scans.execute` per avviare profili approvati e annullare proprie esecuzioni; il secondo richiede il primo. Un contributor non può avviare implicitamente un ambiente fermo né annullare le esecuzioni di altri utenti.
+| Entità | Relazioni e dati da conservare |
+| --- | --- |
+| Operazione ambiente | `operation_id`, ambiente, richiedente, azione, stato, tentativi, timestamp e ultimo errore; chiave di idempotenza |
+| Execution | `execution_id`, progetto, ambiente e generazione runtime, autore se noto, origine gestita/osservata, profilo opzionale, snapshot dei target e della configurazione, stato, exit code nullable, segnale, tempi |
+| Artefatto | Execution, percorso relativo o storage key, formato, dimensione, checksum, stato di acquisizione e parsing, versione parser |
+| Evento acquisito | `event_id` univoco, versione schema, agente/nodo, runtime, timestamp evento/ricezione, tipo, evidenza e stato di elaborazione |
+| Installazione tool | Ambiente e generazione runtime, nome normalizzato, package manager, versione, percorso o contesto di installazione, stato, evidenza e data verifica |
 
-Solo i progetti attivi possono avviare esecuzioni. Passare a inattivo o archiviato impedisce nuovi avvii, annulla le esecuzioni in coda e richiede lo stop di quelle in corso. Lo stato del progetto non certifica che il container sia già fermo.
+Un progetto ha più execution; ciascuna appartiene a un solo ambiente e può produrre più artefatti. I riferimenti devono appartenere allo stesso progetto. Il PID da solo non identifica un'execution: servono nodo, boot, identità e tempo di avvio del processo e correlazione al runtime.
 
-Revoche e autorizzazioni devono essere ricontrollate dai worker prima dell'avvio; per le esecuzioni già avviate interessate da una revoca viene richiesto lo stop. Quote e prenotazioni degli slot devono essere atomiche. Il purge futuro richiederà cleanup verificato di container, volumi e file: cancellare una riga SQL non rimuove queste risorse.
+Il nome `ProjectTool` nella proposta indica il catalogo aggregato visibile nel progetto. Le installazioni vanno comunque associate all'ambiente: lo stesso tool può avere versioni diverse in due ambienti, virtualenv o percorsi. Una possibile chiave di deduplicazione comprende ambiente, generazione runtime, package manager, nome e contesto di installazione; va definita con lo schema definitivo.
+
+Stato processo, stato parsing e disponibilità dei risultati restano distinguibili. Un exit code sconosciuto resta `null`; non si converte in zero. Modificare il profilo o ricreare l'ambiente non riscrive lo storico delle execution né rende correnti le vecchie installazioni.
+
+Permessi e transizioni sono descritti nelle feature collegate, per evitare regole duplicate tra modello e flussi operativi.
 
 ## Decisioni rimandate
 
 - Limiti condivisi per utente oppure quote individuali per collaboratore.
 - Accesso a tutti gli ambienti già avviati oppure assegnazioni per singolo ambiente/profilo.
 - Schema dei parametri supportati da ciascun tool e regole precise di matching dello scope.
-- Orchestrazione, isolamento di rete e gestione delle esecuzioni e dei relativi stati.
+- Schema definitivo delle entità operative e policy di conservazione dello storico.
+- Conferma delle proposte di orchestrazione, isolamento e stati documentate nelle feature.
 
 Questo documento conserva le proposte per una revisione successiva; non amplia il perimetro del modello Project corrente.

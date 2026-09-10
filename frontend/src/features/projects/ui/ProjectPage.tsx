@@ -7,6 +7,7 @@ import { useAuth } from '../../auth/model/AuthContext'
 import { errorMessage } from '../../../shared/api/client'
 import { ProjectForm } from './ProjectForm'
 import { CollaboratorsSection } from './CollaboratorsSection'
+import { EnvironmentsSection } from './EnvironmentsSection'
 
 export function ProjectPage() {
   const { projectId } = useParams()
@@ -97,6 +98,7 @@ function ProjectContent({ project, reload }: { project: Project, reload: () => v
     {pending && <p role="status">Saving project status…</p>}
     {error && <p role="alert" className="text-red-700">{error}</p>}
     <button disabled={pending} onClick={reload} className="justify-self-start underline disabled:opacity-40">Reload project</button>
+    {owner && <EnvironmentsSection key={project.id + ':' + project.status} project={project} />}
     {owner && <CollaboratorsSection project={project} />}
   </>
 }

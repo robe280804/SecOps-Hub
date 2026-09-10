@@ -16,7 +16,7 @@ Riferimenti: [README](../../README.md), [documento architetturale](../../README-
 
 Ogni progetto ha un unico creatore che ne mantiene la proprietà e la gestione completa. Il creatore può assegnare utenti già presenti nella piattaforma, revocarne l'accesso e stabilire quali operazioni possono eseguire. I collaboratori possono consultare documenti o partecipare alle attività, ma non amministrare gli ambienti.
 
-Il perimetro attuale comprende soltanto dati principali del progetto, proprietà, collaboratori e regole di accesso. Ambienti, settings operativi, IP/DNS, scope e profili di scansione sono rimandati alla bozza separata [environment-and-scanning.md](environment-and-scanning.md). Non sono prerequisiti per creare un progetto.
+Il perimetro attuale comprende soltanto dati principali del progetto, proprietà, collaboratori e regole di accesso. Ambienti, settings operativi, IP/DNS, scope e profili di scansione sono rimandati alla bozza separata [environment.md](environment.md). Non sono prerequisiti per creare un progetto.
 
 Tipi, stati e livelli di accesso sono già adottati dalla base dati. Le proposte per i permessi dei moduli futuri richiedono ancora revisione.
 
