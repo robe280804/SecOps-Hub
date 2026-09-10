@@ -6,6 +6,7 @@ use App\Models\User;
 use Database\Seeders\ProjectEnvironmentSeeder;
 use Database\Seeders\ProjectSeeder;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
+use Illuminate\Support\Env;
 use Illuminate\Support\Facades\Queue;
 
 uses(LazilyRefreshDatabase::class);
@@ -13,6 +14,39 @@ uses(LazilyRefreshDatabase::class);
 beforeEach(function () {
     config(['environments.approved_images' => ['registry.example.test/tools:approved']]);
 });
+
+it('seeds demo environments using default or explicitly configured images', function (?string $images, string $expected) {
+    $repository = Env::getRepository();
+    $previous = $repository->get('ENVIRONMENTS_APPROVED_IMAGES');
+
+    try {
+        if ($images === null) {
+            $repository->clear('ENVIRONMENTS_APPROVED_IMAGES');
+        } else {
+            $repository->set('ENVIRONMENTS_APPROVED_IMAGES', $images);
+        }
+        config(['environments' => require config_path('environments.php')]);
+    } finally {
+        if ($previous === null) {
+            $repository->clear('ENVIRONMENTS_APPROVED_IMAGES');
+        } else {
+            $repository->set('ENVIRONMENTS_APPROVED_IMAGES', $previous);
+        }
+    }
+    $admin = User::factory()->admin()->create();
+    config(['admin.email' => $admin->email]);
+    $this->seed(ProjectSeeder::class);
+
+    $this->seed(ProjectEnvironmentSeeder::class);
+
+    $this->assertDatabaseCount('project_environments', 4);
+    expect(ProjectEnvironment::query()->pluck('base_image')->unique()->all())->toBe([$expected]);
+})->with([
+    'missing variable' => [null, 'ubuntu:24.04'],
+    'empty variable' => ['', 'ubuntu:24.04'],
+    'blank list' => [' ,  , ', 'ubuntu:24.04'],
+    'custom list' => [' tools:approved, tools:other ', 'tools:approved'],
+]);
 
 it('seeds inactive environments only for admin demo projects and preserves local changes on rerun', function () {
     Queue::fake();

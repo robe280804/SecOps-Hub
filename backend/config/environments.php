@@ -6,7 +6,7 @@ return [
     'approved_images' => array_values(array_filter(array_map(
         'trim',
         explode(',', (string) env('ENVIRONMENTS_APPROVED_IMAGES', '')),
-    ))),
+    ))) ?: ['ubuntu:24.04'],
 
     'default_network_configuration' => [
         'version' => 1,
