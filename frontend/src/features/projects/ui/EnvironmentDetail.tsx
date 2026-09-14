@@ -6,6 +6,7 @@ import type { EnvironmentOptions, ProjectEnvironment } from '../model/environmen
 import { errorMessage } from '../../../shared/api/client'
 import { EnvironmentForm } from './EnvironmentForm'
 import { EnvironmentStatusBadge } from './EnvironmentStatusBadge'
+import { EnvironmentTerminal } from './EnvironmentTerminal'
 
 type Props = {
   projectId: number
@@ -26,6 +27,11 @@ export function EnvironmentDetail(props: Props) {
   const { projectId, environmentId } = props
   const load = useCallback((signal: AbortSignal) => environmentApi.get(projectId, environmentId, signal), [projectId, environmentId])
   const { data, loading, error, reload } = useProjectQuery(load)
+  useEffect(() => {
+    if (!data || !['provisioning', 'starting', 'stopping'].includes(data.status)) return
+    const timer = window.setTimeout(reload, 5000)
+    return () => window.clearTimeout(timer)
+  }, [data, reload])
 
   return <section className="grid min-w-0 gap-4 rounded-lg border border-gray-300 bg-white p-4 sm:p-6" aria-label="Environment details">
     {loading && <p role="status">Loading environment…</p>}
@@ -37,6 +43,8 @@ export function EnvironmentDetail(props: Props) {
 
 function EnvironmentContent({ projectId, archived, environment, options, onClose, onChanged, reload }: Props & { environment: ProjectEnvironment, reload: () => void }) {
   const [editing, setEditing] = useState(false)
+  const [terminal, setTerminal] = useState(false)
+  const [confirmStop, setConfirmStop] = useState(false)
   const [confirming, setConfirming] = useState(false)
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -46,6 +54,43 @@ function EnvironmentContent({ projectId, archived, environment, options, onClose
   useEffect(() => { if (!editing && !confirming) heading.current?.focus() }, [editing, confirming])
   const limits = environment.resource_limits
   const network = environment.network_configuration
+
+  async function start() {
+    if (request.current) return
+    const controller = new AbortController()
+    request.current = controller
+    setPending(true)
+    setError(null)
+    try {
+      await environmentApi.start(projectId, environment.id, controller.signal)
+      if (!controller.signal.aborted) onChanged('Environment start requested.', false)
+    } catch (failure) {
+      if (!controller.signal.aborted) setError(errorMessage(failure))
+    } finally {
+      if (request.current === controller) request.current = null
+      if (!controller.signal.aborted) setPending(false)
+    }
+  }
+
+  async function stop() {
+    if (request.current) return
+    const controller = new AbortController()
+    request.current = controller
+    setPending(true)
+    setError(null)
+    try {
+      await environmentApi.stop(projectId, environment.id, controller.signal)
+      if (!controller.signal.aborted) {
+        setTerminal(false)
+        onChanged('Environment stop requested. Files and installed tools are preserved.', false)
+      }
+    } catch (failure) {
+      if (!controller.signal.aborted) setError(errorMessage(failure))
+    } finally {
+      if (request.current === controller) request.current = null
+      if (!controller.signal.aborted) setPending(false)
+    }
+  }
 
   async function remove() {
     if (request.current) return
@@ -94,15 +139,32 @@ function EnvironmentContent({ projectId, archived, environment, options, onClose
       <div><dt className="font-medium">Last observed</dt><dd>{dateLabel(environment.last_observed_at)}</dd></div>
       <div><dt className="font-medium">Updated</dt><dd>{dateLabel(environment.updated_at)}</dd></div>
     </dl>
-    {!archived && !environment.capabilities.update && <p className="text-sm text-gray-600">An environment operation is in progress. Reload its details before making changes.</p>}
+    {terminal && environment.capabilities.shell && <EnvironmentTerminal projectId={projectId} environmentId={environment.id} />}
+    {['running', 'ready'].includes(environment.status) && !environment.capabilities.shell && <p role="status" className="text-sm text-gray-600">The container is running. Terminal access is unavailable; check the gateway configuration and project status.</p>}
+    {environment.status === 'stopped' && <p className="text-sm text-gray-600">Files and installed tools are preserved. Start the environment to resume working; previous processes have ended.</p>}
+    {environment.status === 'error' && <p role="alert" className="text-sm text-red-700">An environment operation failed. Check the worker logs before retrying.</p>}
+    {!archived && !environment.capabilities.update && <p className="text-sm text-gray-600">An environment operation is in progress. Details refresh automatically.</p>}
     {!archived && !environment.capabilities.delete && <p className="text-sm text-gray-600">Deletion requires runtime cleanup and is unavailable for this environment.</p>}
     {!confirming && <div className="flex flex-wrap gap-3">
+      {environment.capabilities.shell && <button disabled={pending} onClick={() => setTerminal(!terminal)}
+        className="rounded bg-gray-900 px-4 py-2 text-white disabled:opacity-40">{terminal ? 'Close terminal' : 'Open terminal'}</button>}
+      {environment.capabilities.stop && <button disabled={pending} onClick={() => setConfirmStop(true)}
+        className="rounded border border-amber-600 px-4 py-2 text-amber-900 disabled:opacity-40">Stop environment</button>}
+      {!archived && environment.capabilities.start && <button disabled={pending} onClick={() => { void start() }}
+        className="rounded bg-green-800 px-4 py-2 text-white disabled:opacity-40">{pending ? 'Requesting start…' : 'Start environment'}</button>}
       {!archived && environment.capabilities.update && <button disabled={!options} onClick={() => setEditing(true)}
         className="rounded bg-gray-900 px-4 py-2 text-white disabled:opacity-40">Edit environment</button>}
       {!archived && environment.capabilities.delete && <button onClick={() => setConfirming(true)}
         className="rounded border border-red-300 px-4 py-2 text-red-700">Delete environment</button>}
       <button onClick={reload} className="rounded border px-4 py-2">Reload details</button>
       <button onClick={onClose} className="rounded px-3 py-2 underline">Close details</button>
+    </div>}
+    {confirmStop && <div role="group" aria-label="Confirm environment stop" className="grid gap-3 rounded border border-amber-300 bg-amber-50 p-4">
+      <p>Stopping ends all running commands and scans. Files and installed tools remain available when you start this environment again.</p>
+      <div className="flex gap-3">
+        <button disabled={pending} onClick={() => { void stop() }} className="rounded bg-amber-800 px-4 py-2 text-white disabled:opacity-40">{pending ? 'Requesting stop…' : 'Confirm stop'}</button>
+        <button disabled={pending} onClick={() => setConfirmStop(false)} className="rounded border px-4 py-2">Cancel</button>
+      </div>
     </div>}
     {confirming && <div className="grid gap-3 rounded border border-red-200 bg-red-50 p-4" role="group" aria-label="Confirm environment deletion">
       <p className="break-words">Permanently delete <strong>{environment.name}</strong>? This removes its saved configuration and cannot be undone.</p>

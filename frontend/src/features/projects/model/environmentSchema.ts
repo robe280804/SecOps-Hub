@@ -1,9 +1,9 @@
 import { z } from 'zod'
 
-export const environmentStatuses = ['inactive', 'provisioning', 'stopped', 'starting', 'ready', 'stopping', 'error', 'deleting'] as const
+export const environmentStatuses = ['inactive', 'provisioning', 'stopped', 'starting', 'running', 'ready', 'stopping', 'error', 'deleting'] as const
 export const environmentStatusLabels: Record<typeof environmentStatuses[number], string> = {
   inactive: 'Not provisioned', provisioning: 'Provisioning', stopped: 'Stopped', starting: 'Starting',
-  ready: 'Ready', stopping: 'Stopping', error: 'Error', deleting: 'Deleting',
+  running: 'Running', ready: 'Ready', stopping: 'Stopping', error: 'Error', deleting: 'Deleting',
 }
 const identifier = z.number().int().positive().max(Number.MAX_SAFE_INTEGER)
 export const networkConfigurationSchema = z.object({
@@ -27,7 +27,7 @@ export const environmentSchema = z.object({
   last_observed_at: z.string().nullable(),
   network_configuration: networkConfigurationSchema.nullable(),
   resource_limits: resourceLimitsSchema.nullable(),
-  capabilities: z.object({ update: z.boolean(), configure: z.boolean(), delete: z.boolean() }),
+  capabilities: z.object({ start: z.boolean().default(false), stop: z.boolean().default(false), shell: z.boolean().default(false), update: z.boolean(), configure: z.boolean(), delete: z.boolean() }),
   created_at: z.string(), updated_at: z.string(),
 })
 export type ProjectEnvironment = z.infer<typeof environmentSchema>

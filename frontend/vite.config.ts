@@ -21,7 +21,10 @@ export default defineConfig(({ mode, command }) => {
     server: {
       port: 5173,
       strictPort: true,
-      proxy: { '/api': proxy, '/sanctum': proxy },
+      proxy: {
+        '/api': proxy, '/sanctum': proxy,
+        '/terminal': { target: env.TERMINAL_PROXY_TARGET || 'http://127.0.0.1:7681', ws: true },
+      },
     },
   }
 })
