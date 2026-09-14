@@ -4,6 +4,10 @@ Stato: **proposta da implementare**. Per entità, campi e relazioni vedere [il m
 
 ## Obiettivo e responsabilità
 
+Aggiornamento implementazione: la creazione salva ancora soltanto la configurazione. Un endpoint separato `/start` avvia il primo provisioning asincrono; il contratto effettivo e i prerequisiti sono in [ENVIRONMENTS.md](../../frontend/ENVIRONMENTS.md). Per questo milestone esiste anche lo stato `running`, che non certifica un terminale pronto. Le sezioni successive descrivono il progetto completo, incluse funzionalità ancora future.
+
+Sono ora disponibili anche `/stop` e `/terminal`. Il gateway usa ttyd su socket Unix privati e Docker exec verso tmux nel runtime, con il client ttyd incorporato nella UI. Laravel rivaluta accesso, sessione utente e identità runtime; il gateway controlla origine e label e chiude i collegamenti revocati. Questa implementazione non richiede Traefik o un server ttyd dentro Kali. Stop/Start conservano lo stesso container; ricreazione e cancellazione restano future.
+
 Un progetto può avere zero o più ambienti. Il massimo è configurabile dall'amministratore della piattaforma; il proprietario crea e gestisce gli ambienti entro quel limite. Creare il progetto non richiede il provisioning: l'attuale `POST /api/v1/projects` continua a creare soltanto il progetto. Un eventuale wizard «crea progetto e ambiente» deve coordinare due operazioni distinte.
 
 L'ambiente mantiene la propria identità quando il container viene ricreato. Configurazione, workspace e storico appartengono all'ambiente; container ID, IP e cgroup appartengono alla sua generazione runtime.
