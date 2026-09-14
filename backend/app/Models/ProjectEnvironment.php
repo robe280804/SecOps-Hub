@@ -9,9 +9,10 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Validation\ValidationException;
 
-#[Fillable(['name', 'description', 'base_image', 'network_configuration', 'resource_limits'])]
+#[Fillable(['name', 'description', 'base_image', 'network_configuration', 'egress_configuration', 'resource_limits'])]
 class ProjectEnvironment extends Model
 {
     /** @use HasFactory<ProjectEnvironmentFactory> */
@@ -32,6 +33,7 @@ class ProjectEnvironment extends Model
             'status' => EnvironmentStatus::class,
             'runtime_generation' => 'integer',
             'network_configuration' => 'array',
+            'egress_configuration' => 'array',
             'resource_limits' => 'array',
             'last_observed_at' => 'immutable_datetime',
         ];
@@ -61,5 +63,29 @@ class ProjectEnvironment extends Model
             && $this->runtime_reference === null
             && $this->runtime_status === null
             && $this->workspace_reference === null;
+    }
+
+    public function operations(): HasMany
+    {
+        return $this->hasMany(EnvironmentOperation::class);
+    }
+
+    /**
+     * The effective egress settings, falling back to the platform default for
+     * environments created before controlled egress existed.
+     *
+     * @return array<string, mixed>
+     */
+    public function egressSettings(): array
+    {
+        $configured = is_array($this->egress_configuration) ? $this->egress_configuration : [];
+
+        return $configured + config('environments.egress.default');
+    }
+
+    public function allowsRawSockets(): bool
+    {
+        return $this->egressSettings()['policy'] === 'filtered'
+            && $this->egressSettings()['raw_sockets'] === true;
     }
 }

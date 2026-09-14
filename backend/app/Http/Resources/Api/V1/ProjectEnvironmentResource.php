@@ -29,8 +29,14 @@ class ProjectEnvironmentResource extends JsonResource
             'runtime_status' => $this->runtime_status,
             'last_observed_at' => $this->last_observed_at,
             'network_configuration' => $this->network_configuration,
+            'egress_configuration' => $this->resource->egressSettings(),
             'resource_limits' => $this->resource_limits,
             'capabilities' => [
+                'shell' => config('environments.terminal.enabled') && Gate::allows('shell', $this->resource),
+                'stop' => config('environments.runtime.enabled') && Gate::allows('stop', $this->resource)
+                    && in_array($this->status->value, ['running', 'ready', 'error'], true),
+                'start' => config('environments.runtime.enabled') && Gate::allows('start', $this->resource)
+                    && in_array($this->status->value, ['inactive', 'stopped', 'error'], true),
                 'update' => Gate::allows('update', $this->resource),
                 'configure' => Gate::allows('update', $this->resource) && $this->resource->isUnprovisioned(),
                 'delete' => Gate::allows('delete', $this->resource),

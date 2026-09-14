@@ -26,6 +26,7 @@ class StoreProjectEnvironmentRequest extends ProjectEnvironmentRequest
     {
         $this->mergeIfMissing([
             'network_configuration' => config('environments.default_network_configuration'),
+            'egress_configuration' => config('environments.egress.default'),
             'resource_limits' => config('environments.default_resource_limits'),
         ]);
     }
