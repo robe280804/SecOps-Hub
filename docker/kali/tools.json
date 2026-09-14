@@ -1,0 +1,65 @@
+{
+  "network": {
+    "nmap": true,
+    "masscan": true,
+    "rustscan": true,
+    "amass": true,
+    "subfinder": true,
+    "nuclei": true,
+    "fierce": true,
+    "dnsenum": true,
+    "autorecon": true,
+    "theharvester": true,
+    "responder": true,
+    "netexec": true,
+    "enum4linux-ng": true
+  },
+  "web": {
+    "gobuster": true,
+    "feroxbuster": true,
+    "dirsearch": true,
+    "ffuf": true,
+    "dirb": true,
+    "httpx": true,
+    "katana": true,
+    "nikto": true,
+    "sqlmap": true,
+    "wpscan": true,
+    "arjun": true,
+    "paramspider": true,
+    "dalfox": true,
+    "wafw00f": true
+  },
+  "passwords": {
+    "hydra": true,
+    "john": true,
+    "hashcat": true,
+    "medusa": true,
+    "patator": true,
+    "crackmapexec": true,
+    "evil-winrm": true,
+    "hash-identifier": true,
+    "ophcrack": true
+  },
+  "analysis": {
+    "gdb": true,
+    "radare2": true,
+    "binwalk": true,
+    "ghidra": true,
+    "checksec": true,
+    "strings": true,
+    "objdump": true,
+    "volatility3": true,
+    "foremost": true,
+    "steghide": true,
+    "exiftool": true
+  },
+  "cloud": {
+    "prowler": true,
+    "scout-suite": true,
+    "trivy": true,
+    "kube-hunter": true,
+    "kube-bench": true,
+    "docker-bench-security": true
+  }
+}
