@@ -1,0 +1,97 @@
+name: secops-hub
+
+# Provisioning worker and scheduler for a Linux host. See docs/deployment.md.
+# Requires the Docker data-root on XFS mounted with prjquota, otherwise every
+# environment start fails on the workspace quota check.
+
+x-worker: &worker
+  image: ${SECOPS_WORKER_IMAGE:-secops-hub/worker:local}
+  build:
+    context: ./backend
+    dockerfile: ../docker/worker/Dockerfile
+  restart: always
+  init: true
+  working_dir: /app
+  stop_grace_period: 210s
+  environment:
+    APP_ENV: production
+    APP_DEBUG: "false"
+    LOG_CHANNEL: stderr
+    DB_HOST: ${SECOPS_WORKER_DB_HOST:?set SECOPS_WORKER_DB_HOST}
+    REDIS_HOST: ${SECOPS_WORKER_REDIS_HOST:?set SECOPS_WORKER_REDIS_HOST}
+    ENVIRONMENTS_RUNTIME_ENABLED: "true"
+    ENVIRONMENTS_DOCKER_SOCKET: /var/run/docker.sock
+    ENVIRONMENTS_QUEUE_CONNECTION: redis
+    REDIS_QUEUE_RETRY_AFTER: "240"
+    # Enforced by the built-in local driver on XFS with prjquota.
+    ENVIRONMENTS_VOLUME_DRIVER: local
+    ENVIRONMENTS_VOLUME_SIZE_OPTION: size
+    # Deliberately absent: ENVIRONMENTS_ALLOW_UNLIMITED_STORAGE has no effect
+    # outside APP_ENV=local/testing and must stay false in production.
+  volumes:
+    - type: bind
+      source: ./backend/.env
+      target: /app/.env
+      read_only: true
+      bind:
+        create_host_path: false
+  logging:
+    driver: json-file
+    options:
+      max-size: 10m
+      max-file: "3"
+
+services:
+  terminal:
+    image: ${SECOPS_TERMINAL_IMAGE:-secops-hub/terminal:local}
+    build:
+      context: ./docker/terminal
+    restart: always
+    environment:
+      TERMINAL_ORIGIN: ${SECOPS_TERMINAL_ORIGIN:?set SECOPS_TERMINAL_ORIGIN}
+      TERMINAL_API_URL: ${SECOPS_TERMINAL_API_URL:?set SECOPS_TERMINAL_API_URL}
+    ports:
+      - "127.0.0.1:7681:7681"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    mem_limit: 256m
+    pids_limit: 256
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "2"
+  worker:
+    <<: *worker
+    command: [php, artisan, horizon]
+    volumes:
+      - type: bind
+        source: ./backend/.env
+        target: /app/.env
+        read_only: true
+        bind:
+          create_host_path: false
+      # Root-equivalent access to the host. Keep this service on a trusted
+      # node and never mount the socket into a user environment.
+      - /var/run/docker.sock:/var/run/docker.sock
+    healthcheck:
+      test: [CMD, php, artisan, environments:check, --worker]
+      interval: 30s
+      timeout: 15s
+      start_period: 30s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: ${SECOPS_WORKER_MEMORY:-512M}
+
+  scheduler:
+    <<: *worker
+    command: [php, artisan, schedule:work, --no-interaction]
+    depends_on:
+      worker:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: ${SECOPS_SCHEDULER_MEMORY:-256M}

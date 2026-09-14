@@ -1,0 +1,91 @@
+name: secops-hub-local
+
+x-worker: &worker
+  image: secops-hub/worker:local
+  build:
+    context: ./backend
+    dockerfile: ../docker/worker/Dockerfile
+  restart: unless-stopped
+  init: true
+  working_dir: /app
+  stop_grace_period: 210s
+  environment:
+    APP_ENV: local
+    LOG_CHANNEL: stderr
+    DB_HOST: ${SECOPS_WORKER_DB_HOST:-host.docker.internal}
+    REDIS_HOST: ${SECOPS_WORKER_REDIS_HOST:-host.docker.internal}
+    ENVIRONMENTS_RUNTIME_ENABLED: "true"
+    ENVIRONMENTS_DOCKER_SOCKET: /var/run/docker.sock
+    ENVIRONMENTS_ALLOW_UNLIMITED_STORAGE: "true"
+    ENVIRONMENTS_QUEUE_CONNECTION: redis
+    REDIS_QUEUE_RETRY_AFTER: "240"
+  extra_hosts:
+    - host.docker.internal:host-gateway
+  volumes:
+    - type: bind
+      source: ./backend/.env
+      target: /app/.env
+      read_only: true
+      bind:
+        create_host_path: false
+  logging:
+    driver: json-file
+    options:
+      max-size: 10m
+      max-file: "3"
+
+services:
+  terminal:
+    image: secops-hub/terminal:local
+    build:
+      context: ./docker/terminal
+    restart: unless-stopped
+    environment:
+      TERMINAL_ORIGIN: ${SECOPS_TERMINAL_ORIGIN:-http://localhost:5173}
+      TERMINAL_API_URL: ${SECOPS_TERMINAL_API_URL:-http://host.docker.internal:8000}
+      TERMINAL_CA_FILE: ${SECOPS_TERMINAL_CA_FILE:-}
+    extra_hosts:
+      - host.docker.internal:host-gateway
+      - "${SECOPS_TERMINAL_API_HOST:-secops-hub-backend.test}:host-gateway"
+    ports:
+      - "127.0.0.1:7681:7681"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./docker/terminal/trust:/trust:ro
+    mem_limit: 256m
+    pids_limit: 256
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "2"
+  worker:
+    <<: *worker
+    command: [php, artisan, horizon]
+    volumes:
+      - type: bind
+        source: ./backend/.env
+        target: /app/.env
+        read_only: true
+        bind:
+          create_host_path: false
+      - /var/run/docker.sock:/var/run/docker.sock
+    healthcheck:
+      test: [CMD, php, artisan, environments:check, --worker]
+      interval: 30s
+      timeout: 15s
+      start_period: 30s
+      retries: 3
+
+  scheduler:
+    <<: *worker
+    command: [php, artisan, schedule:work, --no-interaction]
+    depends_on:
+      worker:
+        condition: service_healthy
+
+  kali-image:
+    profiles: [images]
+    image: secops-hub/kali:local
+    build:
+      context: ./docker/kali

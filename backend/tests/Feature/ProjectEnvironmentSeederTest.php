@@ -42,9 +42,9 @@ it('seeds demo environments using default or explicitly configured images', func
     $this->assertDatabaseCount('project_environments', 4);
     expect(ProjectEnvironment::query()->pluck('base_image')->unique()->all())->toBe([$expected]);
 })->with([
-    'missing variable' => [null, 'ubuntu:24.04'],
-    'empty variable' => ['', 'ubuntu:24.04'],
-    'blank list' => [' ,  , ', 'ubuntu:24.04'],
+    'missing variable' => [null, 'secops-hub/kali:local'],
+    'empty variable' => ['', 'secops-hub/kali:local'],
+    'blank list' => [' ,  , ', 'secops-hub/kali:local'],
     'custom list' => [' tools:approved, tools:other ', 'tools:approved'],
 ]);
 

@@ -21,13 +21,70 @@ const environment = {
   base_image: options.approved_images[0], desired_state: 'stopped', status: 'inactive',
   runtime_generation: 0, runtime_status: null, last_observed_at: null,
   network_configuration: network, resource_limits: resources,
-  capabilities: { update: true, configure: true, delete: true },
+  capabilities: { start: false, stop: false, shell: false, update: true, configure: true, delete: true },
   created_at: '2026-09-09T12:00:00Z', updated_at: '2026-09-09T12:00:00Z',
 }
 const makeApi = (fetcher) => createEnvironmentApi(createApiClient({
   origin: 'https://api.example.com', readCookie: () => 'XSRF-TOKEN=csrf', fetcher,
 }))
 const fields = () => ({ ...environmentInitialValues(options), name: 'Recon' })
+
+test('requests a scoped terminal session after CSRF and rejects external terminal URLs', async () => {
+  const expected = { url: '/terminal/' + 'a'.repeat(64) + '/', expires_at: '2026-09-14T12:15:00Z' }
+  const calls = []
+  const api = makeApi(async (url, init) => {
+    calls.push(url.pathname)
+    if (url.pathname === '/sanctum/csrf-cookie') return new Response(null, { status: 204 })
+    assert.equal(init.method, 'POST')
+    assert.equal(init.headers.get('X-XSRF-TOKEN'), 'csrf')
+    return Response.json({ data: expected }, { status: 201 })
+  })
+  assert.deepEqual(await api.terminal(12, 8), expected)
+  assert.deepEqual(calls, ['/sanctum/csrf-cookie', '/api/v1/projects/12/environments/8/terminal'])
+  for (const url of ['https://evil.example/', '//evil.example/', '/terminal/../api/', 'javascript:alert(1)']) {
+    const invalid = makeApi(async (path) => path.pathname === '/sanctum/csrf-cookie'
+      ? new Response(null, { status: 204 }) : Response.json({ data: { ...expected, url } }))
+    await assert.rejects(invalid.terminal(12, 8), (error) => error.status === 502)
+  }
+})
+
+test('stops the scoped environment after CSRF and validates its response identity', async () => {
+  const calls = []
+  const api = makeApi(async (url, init) => {
+    calls.push(url.pathname)
+    if (url.pathname === '/sanctum/csrf-cookie') return new Response(null, { status: 204 })
+    assert.equal(init.method, 'POST')
+    return Response.json({ data: { ...environment, status: 'stopping' } }, { status: 202 })
+  })
+  assert.equal((await api.stop(12, 8)).status, 'stopping')
+  assert.deepEqual(calls, ['/sanctum/csrf-cookie', '/api/v1/projects/12/environments/8/stop'])
+})
+
+test('starts the scoped environment after CSRF and accepts its asynchronous status', async () => {
+  const calls = []
+  const api = makeApi(async (url, init) => {
+    calls.push(url.pathname)
+    if (url.pathname === '/sanctum/csrf-cookie') return new Response(null, { status: 204 })
+    assert.equal(init.method, 'POST')
+    assert.equal(init.headers.get('X-XSRF-TOKEN'), 'csrf')
+    return Response.json({ data: { ...environment, status: 'provisioning', desired_state: 'running' }, operation_id: 3 }, { status: 202 })
+  })
+  assert.equal((await api.start(12, 8)).status, 'provisioning')
+  assert.deepEqual(calls, ['/sanctum/csrf-cookie', '/api/v1/projects/12/environments/8/start'])
+})
+
+test('does not replay failed starts and accepts running without terminal readiness', async () => {
+  let writes = 0
+  const api = makeApi(async (url) => {
+    if (url.pathname === '/sanctum/csrf-cookie') return new Response(null, { status: 204 })
+    writes++
+    return Response.json({ message: 'Unavailable' }, { status: 503 })
+  })
+  await assert.rejects(api.start(12, 8), (error) => error.status === 503)
+  assert.equal(writes, 1)
+  const running = makeApi(async () => Response.json({ data: { ...environment, status: 'running', runtime_status: 'running' } }))
+  assert.equal((await running.get(12, 8)).status, 'running')
+})
 
 test('lists environments with scoped pagination and reads live form options', async () => {
   const api = makeApi(async (url, init) => {

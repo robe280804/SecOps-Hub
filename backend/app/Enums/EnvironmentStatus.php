@@ -8,6 +8,7 @@ enum EnvironmentStatus: string
     case Provisioning = 'provisioning';
     case Stopped = 'stopped';
     case Starting = 'starting';
+    case Running = 'running';
     case Ready = 'ready';
     case Stopping = 'stopping';
     case Error = 'error';

@@ -23,6 +23,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        RateLimiter::for('terminal-check', fn (Request $request): Limit => Limit::perMinute(240)->by((string) $request->user()->id));
         RateLimiter::for('collaborator-lookup', function (Request $request): Limit {
             return Limit::perMinute(10)->by((string) $request->user()->id);
         });

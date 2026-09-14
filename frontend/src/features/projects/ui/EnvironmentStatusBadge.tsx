@@ -5,6 +5,7 @@ const statusStyles: Record<ProjectEnvironment['status'], string> = {
   provisioning: 'bg-blue-50 text-blue-800',
   stopped: 'bg-gray-100 text-gray-700',
   starting: 'bg-blue-50 text-blue-800',
+  running: 'bg-green-50 text-green-800',
   ready: 'bg-green-50 text-green-800',
   stopping: 'bg-amber-50 text-amber-800',
   error: 'bg-red-50 text-red-800',

@@ -68,4 +68,50 @@ class ProjectEnvironmentPolicy
             ? Response::allow()
             : Response::denyWithStatus(409, 'Provisioned environments require runtime cleanup before deletion.');
     }
+
+    public function start(User $user, ProjectEnvironment $environment): Response
+    {
+        $access = $this->view($user, $environment);
+
+        if ($access->denied()) {
+            return $access;
+        }
+
+        if ($environment->project->status !== ProjectStatus::Active) {
+            return Response::denyWithStatus(409, 'Activate the project before starting an environment.');
+        }
+
+        return $environment->desired_state === EnvironmentDesiredState::Deleted
+            || in_array($environment->status, [EnvironmentStatus::Stopping, EnvironmentStatus::Deleting], true)
+                ? Response::denyWithStatus(409, 'Wait for the environment operation to finish before starting.')
+                : Response::allow();
+    }
+
+    public function stop(User $user, ProjectEnvironment $environment): Response
+    {
+        $access = $this->view($user, $environment);
+        if ($access->denied()) {
+            return $access;
+        }
+
+        return $environment->runtime_reference !== null
+            && in_array($environment->status, [EnvironmentStatus::Running, EnvironmentStatus::Ready, EnvironmentStatus::Stopped, EnvironmentStatus::Stopping, EnvironmentStatus::Error], true)
+                ? Response::allow()
+                : Response::denyWithStatus(409, 'Wait for startup to finish before stopping the environment.');
+    }
+
+    public function shell(User $user, ProjectEnvironment $environment): Response
+    {
+        $access = $this->view($user, $environment);
+        if ($access->denied()) {
+            return $access;
+        }
+
+        return $environment->project->status === ProjectStatus::Active
+            && $environment->desired_state === EnvironmentDesiredState::Running
+            && in_array($environment->status, [EnvironmentStatus::Running, EnvironmentStatus::Ready], true)
+            && $environment->runtime_reference !== null
+                ? Response::allow()
+                : Response::denyWithStatus(409, 'The environment must be running in an active project to open a shell.');
+    }
 }

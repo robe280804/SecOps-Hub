@@ -25,6 +25,7 @@ test('owners can read environments in every project state and write only outside
     expect($policy->create($owner, $project)->allowed())->toBe($status !== ProjectStatus::Archived);
     expect($policy->update($owner, $environment)->allowed())->toBe($status !== ProjectStatus::Archived);
     expect($policy->delete($owner, $environment)->allowed())->toBe($status !== ProjectStatus::Archived);
+    expect($policy->start($owner, $environment)->allowed())->toBe($status === ProjectStatus::Active);
 })->with(ProjectStatus::cases());
 
 test('collaborators cannot administer or inspect environment configuration', function (ProjectAccessLevel $access, ProjectStatus $status) {
@@ -37,6 +38,9 @@ test('collaborators cannot administer or inspect environment configuration', fun
     expect($policy->create($membership->user, $environment->project)->denied())->toBeTrue();
     expect($policy->update($membership->user, $environment)->denied())->toBeTrue();
     expect($policy->delete($membership->user, $environment)->denied())->toBeTrue();
+    expect($policy->start($membership->user, $environment)->denied())->toBeTrue();
+    expect($policy->shell($membership->user, $environment)->denied())->toBeTrue();
+    expect($policy->stop($membership->user, $environment)->denied())->toBeTrue();
     expect($policy->view($membership->user, $environment)->status())->toBeNull();
 })->with(ProjectAccessLevel::cases())->with(ProjectStatus::cases());
 
@@ -51,6 +55,9 @@ test('unrelated users and global admins cannot discover environments', function 
     expect($policy->create($user, $environment->project)->status())->toBe(404);
     expect($policy->update($user, $environment)->status())->toBe(404);
     expect($policy->delete($user, $environment)->status())->toBe(404);
+    expect($policy->start($user, $environment)->status())->toBe(404);
+    expect($policy->shell($user, $environment)->status())->toBe(404);
+    expect($policy->stop($user, $environment)->status())->toBe(404);
 })->with(['user', 'admin']);
 
 test('pending operations prevent environment edits', function (EnvironmentStatus $status, bool $allowed) {

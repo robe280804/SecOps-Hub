@@ -23,6 +23,23 @@ function parseEnvironment(response: unknown, projectId: number, id?: number) {
 
 export function createEnvironmentApi(client: ReturnType<typeof createApiClient>) {
   return {
+    async terminal(projectId: number, id: number, signal?: AbortSignal) {
+      const path = projectPath(projectId) + '/environments/' + positiveId(id) + '/terminal'
+      signal?.throwIfAborted()
+      await client.csrf()
+      signal?.throwIfAborted()
+      return parse(z.object({ data: z.object({
+        url: z.string().regex(/^\/terminal\/[A-Za-z0-9]{64}\/$/),
+        expires_at: z.string().datetime({ offset: true }),
+      }) }), await client.request(path, { method: 'POST', signal })).data
+    },
+    async stop(projectId: number, id: number, signal?: AbortSignal) {
+      const path = projectPath(projectId) + '/environments/' + positiveId(id) + '/stop'
+      signal?.throwIfAborted()
+      await client.csrf()
+      signal?.throwIfAborted()
+      return parseEnvironment(await client.request(path, { method: 'POST', signal }), projectId, id)
+    },
     async list(projectId: number, page = 1, signal?: AbortSignal) {
       const result = parse(environmentPageSchema, await client.request(projectPath(projectId) + '/environments', {
         query: { page: positiveId(page) }, signal,
@@ -58,6 +75,13 @@ export function createEnvironmentApi(client: ReturnType<typeof createApiClient>)
       await client.csrf()
       signal?.throwIfAborted()
       await client.request(path, { method: 'DELETE', signal })
+    },
+    async start(projectId: number, id: number, signal?: AbortSignal) {
+      const path = projectPath(projectId) + '/environments/' + positiveId(id) + '/start'
+      signal?.throwIfAborted()
+      await client.csrf()
+      signal?.throwIfAborted()
+      return parseEnvironment(await client.request(path, { method: 'POST', signal }), projectId, id)
     },
   }
 }

@@ -23,6 +23,7 @@ class ProjectEnvironmentFactory extends Factory
             'status' => EnvironmentStatus::Inactive,
             'runtime_generation' => 0,
             'network_configuration' => ['version' => 1, 'mode' => 'automatic', 'dns_servers' => [], 'search_domains' => []],
+            'egress_configuration' => ['version' => 1, 'policy' => 'blocked', 'allowed_targets' => [], 'raw_sockets' => false],
             'resource_limits' => ['version' => 1, 'cpus' => 1, 'memory_bytes' => 536870912, 'storage_bytes' => 5368709120, 'pids' => 128],
         ];
     }

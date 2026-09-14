@@ -107,7 +107,7 @@ it('shows approved response fields without runtime references or raw errors', fu
     expect(array_keys($response->json('data')))->toBe([
         'id', 'project_id', 'name', 'description', 'base_image', 'desired_state', 'status',
         'runtime_generation', 'runtime_status', 'last_observed_at',
-        'network_configuration', 'resource_limits', 'capabilities', 'created_at', 'updated_at',
+        'network_configuration', 'egress_configuration', 'resource_limits', 'capabilities', 'created_at', 'updated_at',
     ]);
     expect($response->getContent())->not->toContain('Secret daemon error', $environment->runtime_reference, $environment->workspace_reference);
 });

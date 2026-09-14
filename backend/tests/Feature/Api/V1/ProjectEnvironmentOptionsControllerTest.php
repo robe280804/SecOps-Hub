@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\EnvironmentStatus;
 use App\Models\Project;
 use App\Models\ProjectEnvironment;
 use App\Models\ProjectMembership;
@@ -56,7 +57,7 @@ it('exposes capabilities without revealing persistent runtime references', funct
     $environment = ProjectEnvironment::factory()->{$state}()->create();
 
     $this->actingAs($environment->project->creator)->getJson('/api/v1/projects/'.$environment->project_id.'/environments/'.$environment->id)
-        ->assertOk()->assertJsonPath('data.capabilities', ['update' => $update, 'configure' => $configure, 'delete' => $delete])
+        ->assertOk()->assertJsonPath('data.capabilities', ['start' => false, 'update' => $update, 'configure' => $configure, 'delete' => $delete])
         ->assertJsonMissingPath('data.workspace_reference')->assertJsonMissingPath('data.runtime_reference');
 })->with([
     ['ready', false, true, false],
@@ -69,7 +70,7 @@ it('returns no writable capabilities for archived environments', function () {
     $environment = ProjectEnvironment::factory()->for(Project::factory()->archived())->create();
 
     $this->actingAs($environment->project->creator)->getJson('/api/v1/projects/'.$environment->project_id.'/environments')
-        ->assertOk()->assertJsonPath('data.0.capabilities', ['update' => false, 'configure' => false, 'delete' => false]);
+        ->assertOk()->assertJsonPath('data.0.capabilities', ['start' => false, 'update' => false, 'configure' => false, 'delete' => false]);
 });
 
 it('allows configuration of inactive environments but prevents deletion when a workspace exists', function () {
@@ -77,11 +78,36 @@ it('allows configuration of inactive environments but prevents deletion when a w
     $owner = $environment->project->creator;
     $path = '/api/v1/projects/'.$environment->project_id.'/environments/'.$environment->id;
     $this->actingAs($owner)->getJson($path)->assertOk()
-        ->assertJsonPath('data.capabilities', ['update' => true, 'configure' => true, 'delete' => true]);
+        ->assertJsonPath('data.capabilities', ['start' => false, 'update' => true, 'configure' => true, 'delete' => true]);
 
     $environment->workspace_reference = 'internal-volume';
     $environment->save();
 
     $this->getJson($path)->assertOk()
-        ->assertJsonPath('data.capabilities', ['update' => true, 'configure' => false, 'delete' => false]);
+        ->assertJsonPath('data.capabilities', ['start' => false, 'update' => true, 'configure' => false, 'delete' => false]);
+});
+
+it('offers the start capability only for states the runtime can actually start', function (EnvironmentStatus $status, bool $start) {
+    config(['environments.runtime.enabled' => true]);
+    $environment = ProjectEnvironment::factory()->for(Project::factory()->active())->ready()->create(['status' => $status]);
+
+    $this->actingAs($environment->project->creator)->getJson('/api/v1/projects/'.$environment->project_id.'/environments/'.$environment->id)
+        ->assertOk()->assertJsonPath('data.capabilities.start', $start);
+})->with([
+    [EnvironmentStatus::Inactive, true],
+    [EnvironmentStatus::Stopped, true],
+    [EnvironmentStatus::Error, true],
+    [EnvironmentStatus::Provisioning, false],
+    [EnvironmentStatus::Starting, false],
+    [EnvironmentStatus::Running, false],
+    [EnvironmentStatus::Ready, false],
+    [EnvironmentStatus::Stopping, false],
+]);
+
+it('withholds the start capability from projects that are not active when the runtime is enabled', function () {
+    config(['environments.runtime.enabled' => true]);
+    $environment = ProjectEnvironment::factory()->for(Project::factory()->archived())->create();
+
+    $this->actingAs($environment->project->creator)->getJson('/api/v1/projects/'.$environment->project_id.'/environments/'.$environment->id)
+        ->assertOk()->assertJsonPath('data.capabilities.start', false);
 });
